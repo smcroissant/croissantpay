@@ -1,0 +1,28 @@
+{
+  "name": "croissantpay",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter @croissantpay/web dev",
+    "build": "pnpm --filter @croissantpay/web build",
+    "start": "pnpm --filter @croissantpay/web start",
+    "db:generate": "pnpm --filter @croissantpay/web db:generate",
+    "db:migrate": "pnpm --filter @croissantpay/web db:migrate",
+    "db:push": "pnpm --filter @croissantpay/web db:push",
+    "db:studio": "pnpm --filter @croissantpay/web db:studio",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
+

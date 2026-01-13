@@ -1,0 +1,75 @@
+{
+  "name": "@croissantpay/react-native",
+  "version": "0.1.0",
+  "description": "React Native SDK for CroissantPay - In-app purchase and subscription management",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
+  "files": [
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "crp.podspec",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__"
+  ],
+  "scripts": {
+    "build": "bob build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "clean": "rm -rf lib"
+  },
+  "keywords": [
+    "react-native",
+    "ios",
+    "android",
+    "in-app-purchase",
+    "subscription",
+    "croissantpay",
+    "revenuecat-alternative"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croissantpay/react-native-croissantpay.git"
+  },
+  "author": "CroissantPay",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/croissantpay/react-native-croissantpay/issues"
+  },
+  "homepage": "https://github.com/croissantpay/react-native-croissantpay#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-native": "^0.73.0",
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "react-native-builder-bob": "^0.23.0",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  }
+}
+

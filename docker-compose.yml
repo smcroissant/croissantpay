@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # CroissantPay Application
+  croissantpay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://croissantpay:croissantpay@postgres:5432/croissantpay
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-in-production-min-32-chars}
+      - BETTER_AUTH_URL=http://localhost:3000
+      - CROISSANTPAY_DEPLOYMENT_MODE=self-hosted
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=croissantpay
+      - POSTGRES_PASSWORD=croissantpay
+      - POSTGRES_DB=croissantpay
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U croissantpay"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
