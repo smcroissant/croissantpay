@@ -15,6 +15,20 @@
       "when": 1767486134872,
       "tag": "0001_add_organization_invitation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1736801600000,
+      "tag": "0002_add_api_request_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1736888000000,
+      "tag": "0003_add_apple_vendor_number",
+      "breakpoints": true
     }
   ]
 }

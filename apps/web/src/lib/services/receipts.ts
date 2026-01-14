@@ -29,24 +29,74 @@ export async function validateiOSReceipt(
   appUserId: string,
   transactionId: string
 ): Promise<ReceiptValidationResult> {
+  // Debug: Log what configuration we have
+  console.log("=== Apple Config Debug ===");
+  console.log("Bundle ID:", appConfig.bundleId || "(not set)");
+  console.log("Apple Key ID:", appConfig.appleKeyId || "(not set)");
+  console.log("Apple Issuer ID:", appConfig.appleIssuerId || "(not set)");
+  console.log("Apple Private Key:", appConfig.applePrivateKey ? `Set (${appConfig.applePrivateKey.length} chars)` : "(not set)");
+  console.log("Transaction ID:", transactionId);
+  console.log("==========================");
+
   if (!appConfig.appleIssuerId || !appConfig.appleKeyId || !appConfig.applePrivateKey) {
+    console.error("Missing Apple configuration:", {
+      hasIssuerId: !!appConfig.appleIssuerId,
+      hasKeyId: !!appConfig.appleKeyId,
+      hasPrivateKey: !!appConfig.applePrivateKey,
+    });
     return {
       success: false,
       subscriberInfo: null,
-      error: "Apple App Store not configured for this app",
+      error: "Apple App Store not configured for this app. Missing: " + 
+        [
+          !appConfig.appleIssuerId && "Issuer ID",
+          !appConfig.appleKeyId && "Key ID", 
+          !appConfig.applePrivateKey && "Private Key"
+        ].filter(Boolean).join(", "),
     };
   }
 
   try {
-    const client = new AppleStoreClient({
+    const config = {
       issuerId: appConfig.appleIssuerId,
       keyId: appConfig.appleKeyId,
       privateKey: appConfig.applePrivateKey,
       bundleId: appConfig.bundleId || "",
-    });
+    };
 
-    // Get transaction info from Apple
-    const transaction = await client.getTransactionInfo(transactionId);
+    let transaction: AppleTransaction;
+    let client: AppleStoreClient;
+    
+    // Check if transactionId is a JWS (StoreKit 2 signed transaction)
+    // JWS format: header.payload.signature (3 parts separated by dots)
+    const isJWS = transactionId.split('.').length === 3;
+    
+    if (isJWS) {
+      // StoreKit 2: Decode the JWS directly - no API call needed!
+      console.log("Decoding StoreKit 2 JWS transaction...");
+      client = new AppleStoreClient(config, true); // Will be used for subscription status lookup
+      transaction = await client.decodeTransaction(transactionId);
+      console.log("Transaction decoded successfully:", {
+        transactionId: transaction.transactionId,
+        productId: transaction.productId,
+        environment: transaction.environment,
+      });
+    } else {
+      // Legacy: Plain transaction ID - need to call Apple API
+      console.log("Looking up transaction via Apple API...");
+      // Try sandbox first (most dev purchases are sandbox)
+      try {
+        client = new AppleStoreClient(config, true);
+        transaction = await client.getTransactionInfo(transactionId);
+        console.log("Transaction found in Sandbox environment");
+      } catch (sandboxError) {
+        // If sandbox fails, try production
+        console.log("Sandbox lookup failed, trying production...");
+        client = new AppleStoreClient(config, false);
+        transaction = await client.getTransactionInfo(transactionId);
+        console.log("Transaction found in Production environment");
+      }
+    }
 
     // Get or create subscriber
     const sub = await getOrCreateSubscriber(appConfig.id, appUserId);
@@ -73,8 +123,12 @@ export async function validateiOSReceipt(
     }
 
     // Process based on transaction type
+    // Use correct environment client based on transaction
+    const isSandbox = transaction.environment === "Sandbox";
+    const envClient = new AppleStoreClient(config, isSandbox);
+    
     if (transaction.type === "Auto-Renewable Subscription") {
-      await processiOSSubscription(sub, prod, transaction, client);
+      await processiOSSubscription(sub, prod, transaction, envClient);
     } else {
       await processiOSPurchase(sub, prod, transaction);
     }
@@ -218,8 +272,9 @@ async function processiOSSubscription(
     expiresDate: transaction.expiresDate
       ? new Date(transaction.expiresDate)
       : undefined,
+    // Apple StoreKit 2 price is in milliunits (1/1000), convert to micros (1/1000000)
     priceAmountMicros: transaction.price
-      ? Math.round(transaction.price * 1_000_000)
+      ? transaction.price * 1000
       : undefined,
     priceCurrencyCode: transaction.currency,
     environment: transaction.environment.toLowerCase(),
@@ -237,8 +292,9 @@ async function processiOSPurchase(
     transactionId: transaction.transactionId,
     originalTransactionId: transaction.originalTransactionId,
     purchaseDate: new Date(transaction.purchaseDate),
+    // Apple StoreKit 2 price is in milliunits (1/1000), convert to micros (1/1000000)
     priceAmountMicros: transaction.price
-      ? Math.round(transaction.price * 1_000_000)
+      ? transaction.price * 1000
       : undefined,
     priceCurrencyCode: transaction.currency,
     environment: transaction.environment.toLowerCase(),

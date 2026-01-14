@@ -123,6 +123,7 @@ export const appsRouter = createTRPCRouter({
         appleTeamId: z.string().nullable().optional(),
         appleKeyId: z.string().nullable().optional(),
         appleIssuerId: z.string().nullable().optional(),
+        appleVendorNumber: z.string().nullable().optional(),
         applePrivateKey: z.string().nullable().optional(),
         appleSharedSecret: z.string().nullable().optional(),
         googleServiceAccount: z.string().nullable().optional(),

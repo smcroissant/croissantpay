@@ -133,6 +133,21 @@ export async function getSubscriberInfo(
     )
     .where(eq(subscriberEntitlement.subscriberId, sub.id));
 
+  // Get all active subscriptions directly (even if no entitlements linked)
+  const activeSubscriptionRows = await db
+    .select({
+      subscription: subscription,
+      product: product,
+    })
+    .from(subscription)
+    .leftJoin(product, eq(subscription.productId, product.id))
+    .where(
+      and(
+        eq(subscription.subscriberId, sub.id),
+        eq(subscription.status, "active")
+      )
+    );
+
   // Get non-subscription purchases
   const purchaseRows = await db
     .select({
@@ -143,9 +158,13 @@ export async function getSubscriberInfo(
     .leftJoin(product, eq(purchase.productId, product.id))
     .where(eq(purchase.subscriberId, sub.id));
 
+  // Build active subscriptions list from direct subscription query
+  const activeSubscriptions: string[] = activeSubscriptionRows
+    .filter((row) => row.product)
+    .map((row) => row.product!.identifier);
+
   // Build entitlements map
   const entitlements: SubscriberInfo["entitlements"] = {};
-  const activeSubscriptions: string[] = [];
 
   for (const row of entitlementRows) {
     if (!row.entitlement) continue;
@@ -155,15 +174,6 @@ export async function getSubscriberInfo(
       row.subscriberEntitlement.isActive &&
       (!row.subscriberEntitlement.expiresDate ||
         row.subscriberEntitlement.expiresDate > now);
-
-    // Check if it's from an active subscription
-    if (
-      row.subscription &&
-      row.subscription.status === "active" &&
-      row.product
-    ) {
-      activeSubscriptions.push(row.product.identifier);
-    }
 
     entitlements[row.entitlement.identifier] = {
       isActive,
@@ -180,6 +190,33 @@ export async function getSubscriberInfo(
       originalPurchaseDate: row.subscription?.originalPurchaseDate ?? null,
       isSandbox: row.subscription?.environment === "sandbox",
     };
+  }
+
+  // Also add entitlements for active subscriptions without explicit entitlement records
+  // This ensures we always show subscription info even if no entitlements are configured
+  for (const row of activeSubscriptionRows) {
+    if (!row.product) continue;
+    
+    const productId = row.product.identifier;
+    // Only add if not already in entitlements
+    if (!Object.values(entitlements).some(e => e.productIdentifier === productId)) {
+      // Create a pseudo-entitlement for the subscription
+      entitlements[productId] = {
+        isActive: true,
+        expiresDate: row.subscription.expiresDate,
+        productIdentifier: productId,
+        purchaseDate: row.subscription.purchaseDate,
+        willRenew: row.subscription.autoRenewEnabled,
+        periodType: row.subscription.isTrialPeriod
+          ? "trial"
+          : row.subscription.isInIntroOfferPeriod
+          ? "intro"
+          : "normal",
+        latestPurchaseDate: row.subscription.purchaseDate,
+        originalPurchaseDate: row.subscription.originalPurchaseDate,
+        isSandbox: row.subscription.environment === "sandbox",
+      };
+    }
   }
 
   // Build non-subscription purchases

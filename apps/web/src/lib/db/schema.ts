@@ -162,6 +162,7 @@ export const app = pgTable(
     appleTeamId: text("apple_team_id"),
     appleKeyId: text("apple_key_id"),
     appleIssuerId: text("apple_issuer_id"),
+    appleVendorNumber: text("apple_vendor_number"), // For importing products/prices
     applePrivateKey: text("apple_private_key"), // encrypted
     appleSharedSecret: text("apple_shared_secret"), // encrypted
     // Google Play Configuration
@@ -449,6 +450,71 @@ export const subscriberEntitlement = pgTable(
     ),
   ]
 );
+
+// ============================================================================
+// API REQUEST LOGS
+// ============================================================================
+
+export const apiRequestMethodEnum = pgEnum("api_request_method", [
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+
+export const apiRequestLog = pgTable(
+  "api_request_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    appId: uuid("app_id").references(() => app.id, { onDelete: "set null" }),
+    // Request info
+    method: apiRequestMethodEnum("method").notNull(),
+    path: text("path").notNull(),
+    query: jsonb("query").$type<Record<string, string>>(),
+    headers: jsonb("headers").$type<Record<string, string>>(),
+    body: jsonb("body").$type<Record<string, unknown>>(),
+    // Response info
+    statusCode: integer("status_code").notNull(),
+    responseBody: jsonb("response_body").$type<Record<string, unknown>>(),
+    responseTime: integer("response_time"), // milliseconds
+    // Client info
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    // Auth info
+    apiKeyType: text("api_key_type"), // public or secret
+    apiKeyPrefix: text("api_key_prefix"), // First 8 chars of the key used
+    // Subscriber context (if applicable)
+    subscriberId: text("subscriber_id"),
+    appUserId: text("app_user_id"),
+    // Error info
+    errorMessage: text("error_message"),
+    errorStack: text("error_stack"),
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("api_log_org_idx").on(table.organizationId),
+    index("api_log_app_idx").on(table.appId),
+    index("api_log_created_idx").on(table.createdAt),
+    index("api_log_path_idx").on(table.path),
+    index("api_log_status_idx").on(table.statusCode),
+  ]
+);
+
+export const apiRequestLogRelations = relations(apiRequestLog, ({ one }) => ({
+  organization: one(organization, {
+    fields: [apiRequestLog.organizationId],
+    references: [organization.id],
+  }),
+  app: one(app, {
+    fields: [apiRequestLog.appId],
+    references: [app.id],
+  }),
+}));
 
 // ============================================================================
 // WEBHOOK EVENTS LOG

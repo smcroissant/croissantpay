@@ -21,8 +21,11 @@ import {
   deleteOffering,
   setOfferingProducts,
   getOfferingProducts,
+  bulkImportProducts,
+  type BulkImportProductInput,
 } from "@/lib/services/products";
 import { getAppsByOrganization, getApp } from "@/lib/services/apps";
+import { createAppStoreConnectClient } from "@/lib/services/app-store-connect";
 import { db } from "@/lib/db";
 import { product, entitlement, offering } from "@/lib/db/schema";
 import { inArray, desc, eq } from "drizzle-orm";
@@ -231,6 +234,29 @@ export const productsRouter = createTRPCRouter({
       return getEntitlementsByApp(input.appId);
     }),
 
+  // Get single entitlement
+  getEntitlement: protectedProcedure
+    .input(z.object({ entitlementId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const ent = await getEntitlement(input.entitlementId);
+      if (!ent) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Entitlement not found",
+        });
+      }
+
+      const app = await getApp(ent.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Entitlement not found",
+        });
+      }
+
+      return ent;
+    }),
+
   // Create entitlement
   createEntitlement: protectedProcedure
     .input(
@@ -363,6 +389,23 @@ export const productsRouter = createTRPCRouter({
       return { ...off, products };
     }),
 
+  // Get offering products separately
+  getOfferingProducts: protectedProcedure
+    .input(z.object({ offeringId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const off = await getOffering(input.offeringId);
+      if (!off) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Offering not found" });
+      }
+
+      const app = await getApp(off.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Offering not found" });
+      }
+
+      return getOfferingProducts(input.offeringId);
+    }),
+
   // Create offering
   createOffering: protectedProcedure
     .input(
@@ -448,6 +491,273 @@ export const productsRouter = createTRPCRouter({
 
       await setOfferingProducts(input.offeringId, input.productIds);
       return { success: true };
+    }),
+
+  // =====================
+  // BULK IMPORT (App Store Connect / Google Play)
+  // =====================
+
+  // Import products from App Store Connect CSV export
+  importFromAppStore: protectedProcedure
+    .input(
+      z.object({
+        appId: z.string().uuid(),
+        products: z.array(
+          z.object({
+            storeProductId: z.string().min(1),
+            displayName: z.string().min(1),
+            type: productTypeEnum,
+            subscriptionPeriod: z.string().optional(),
+            trialDuration: z.string().optional(),
+            subscriptionGroupId: z.string().optional(),
+          })
+        ),
+        updateExisting: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify app ownership
+      const app = await getApp(input.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      const productsToImport: BulkImportProductInput[] = input.products.map(
+        (p) => ({
+          appId: input.appId,
+          identifier: p.storeProductId.replace(/\./g, "_"), // Create identifier from store ID
+          storeProductId: p.storeProductId,
+          platform: "ios" as const,
+          type: p.type,
+          displayName: p.displayName,
+          subscriptionPeriod: p.subscriptionPeriod,
+          trialDuration: p.trialDuration,
+          subscriptionGroupId: p.subscriptionGroupId,
+        })
+      );
+
+      const result = await bulkImportProducts(
+        productsToImport,
+        input.updateExisting
+      );
+
+      return result;
+    }),
+
+  // Import products from Google Play Console CSV export
+  importFromPlayStore: protectedProcedure
+    .input(
+      z.object({
+        appId: z.string().uuid(),
+        products: z.array(
+          z.object({
+            storeProductId: z.string().min(1),
+            displayName: z.string().min(1),
+            type: productTypeEnum,
+            subscriptionPeriod: z.string().optional(),
+            trialDuration: z.string().optional(),
+          })
+        ),
+        updateExisting: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify app ownership
+      const app = await getApp(input.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      const productsToImport: BulkImportProductInput[] = input.products.map(
+        (p) => ({
+          appId: input.appId,
+          identifier: p.storeProductId,
+          storeProductId: p.storeProductId,
+          platform: "android" as const,
+          type: p.type,
+          displayName: p.displayName,
+          subscriptionPeriod: p.subscriptionPeriod,
+          trialDuration: p.trialDuration,
+        })
+      );
+
+      const result = await bulkImportProducts(
+        productsToImport,
+        input.updateExisting
+      );
+
+      return result;
+    }),
+
+  // =====================
+  // SYNC FROM STORE APIs
+  // =====================
+
+  // Sync products directly from App Store Connect API
+  syncFromAppStore: protectedProcedure
+    .input(
+      z.object({
+        appId: z.string().uuid(),
+        updateExisting: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify app ownership
+      const app = await getApp(input.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      // Check if App Store Connect is configured
+      if (!app.applePrivateKey || !app.appleKeyId || !app.appleIssuerId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "App Store Connect API is not configured. Please add your API credentials in the app settings.",
+        });
+      }
+
+      if (!app.bundleId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Bundle ID is required for syncing products from App Store Connect. Please add it in the app settings.",
+        });
+      }
+
+      try {
+        // Create App Store Connect client and fetch products
+        const client = createAppStoreConnectClient(app);
+        const fetchedProducts = await client.fetchAllProducts();
+
+        if (fetchedProducts.length === 0) {
+          return {
+            created: 0,
+            updated: 0,
+            skipped: 0,
+            errors: [],
+            message: "No products found in App Store Connect for this app.",
+          };
+        }
+
+        // Convert to bulk import format
+        const productsToImport: BulkImportProductInput[] = fetchedProducts.map(
+          (p) => ({
+            appId: input.appId,
+            identifier: p.storeProductId.replace(/\./g, "_"),
+            storeProductId: p.storeProductId,
+            platform: "ios" as const,
+            type: p.type,
+            displayName: p.displayName,
+            subscriptionPeriod: p.subscriptionPeriod,
+            subscriptionGroupId: p.subscriptionGroupId,
+          })
+        );
+
+        const result = await bulkImportProducts(
+          productsToImport,
+          input.updateExisting
+        );
+
+        return {
+          ...result,
+          message: `Successfully synced ${result.created + result.updated} products from App Store Connect.`,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error 
+            ? `Failed to sync from App Store Connect: ${error.message}`
+            : "Failed to sync from App Store Connect",
+        });
+      }
+    }),
+
+  // Check if App Store Connect sync is available for an app
+  checkAppStoreConnectStatus: protectedProcedure
+    .input(z.object({ appId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const app = await getApp(input.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      const isConfigured = !!(
+        app.applePrivateKey &&
+        app.appleKeyId &&
+        app.appleIssuerId &&
+        app.bundleId
+      );
+
+      const missingFields: string[] = [];
+      if (!app.applePrivateKey) missingFields.push("Private Key (.p8)");
+      if (!app.appleKeyId) missingFields.push("Key ID");
+      if (!app.appleIssuerId) missingFields.push("Issuer ID");
+      if (!app.bundleId) missingFields.push("Bundle ID");
+
+      return {
+        isConfigured,
+        missingFields,
+        bundleId: app.bundleId,
+      };
+    }),
+
+  // Test App Store Connect connection
+  testAppStoreConnection: protectedProcedure
+    .input(z.object({ appId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const app = await getApp(input.appId);
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      // Check if credentials are configured
+      if (!app.applePrivateKey || !app.appleKeyId || !app.appleIssuerId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "App Store Connect API credentials are not fully configured.",
+        });
+      }
+
+      if (!app.bundleId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Bundle ID is required to test the connection.",
+        });
+      }
+
+      try {
+        const client = createAppStoreConnectClient(app);
+        
+        // Try to fetch apps - this will validate the credentials
+        const apps = await client.getApps();
+        
+        // Find the app with matching bundle ID
+        const matchingApp = apps.find((a) => a.bundleId === app.bundleId);
+        
+        if (!matchingApp) {
+          return {
+            success: true,
+            connected: true,
+            appFound: false,
+            message: `Connected to App Store Connect successfully, but no app found with bundle ID "${app.bundleId}". Found ${apps.length} app(s): ${apps.map(a => a.bundleId).join(", ")}`,
+            availableApps: apps,
+          };
+        }
+
+        return {
+          success: true,
+          connected: true,
+          appFound: true,
+          message: `Successfully connected to App Store Connect! Found app "${matchingApp.name}" with bundle ID "${matchingApp.bundleId}".`,
+          appName: matchingApp.name,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Failed to connect to App Store Connect",
+        });
+      }
     }),
 });
 

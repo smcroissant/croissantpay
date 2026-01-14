@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useParams } from "next/navigation";
 import {
@@ -16,6 +17,11 @@ import {
   Pencil,
   Smartphone,
   X,
+  Upload,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Settings,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 
@@ -25,13 +31,21 @@ export default function ProductsPage() {
   const searchParams = useSearchParams();
   const filterAppId = searchParams.get("appId");
 
+  const [syncResult, setSyncResult] = useState<{
+    type: "success" | "error";
+    message: string;
+    details?: { created: number; updated: number; skipped: number };
+  } | null>(null);
+  const [selectedAppForSync, setSelectedAppForSync] = useState<string | null>(null);
+
   // Fetch data using tRPC
-  const { data: products, isLoading: loadingProducts } =
+  const { data: products, isLoading: loadingProducts, refetch: refetchProducts } =
     trpc.products.list.useQuery();
   const { data: entitlements, isLoading: loadingEntitlements } =
     trpc.products.listEntitlements.useQuery();
   const { data: offerings, isLoading: loadingOfferings } =
     trpc.products.listOfferings.useQuery();
+  const { data: apps } = trpc.apps.list.useQuery();
 
   const isLoading = loadingProducts || loadingEntitlements || loadingOfferings;
 
@@ -50,6 +64,39 @@ export default function ProductsPage() {
   const filterAppName = filterAppId
     ? products?.find((p) => p.appId === filterAppId)?.app?.name
     : null;
+
+  // Sync mutation
+  const syncFromAppStore = trpc.products.syncFromAppStore.useMutation({
+    onSuccess: (result) => {
+      setSyncResult({
+        type: "success",
+        message: result.message || "Products synced successfully!",
+        details: {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped,
+        },
+      });
+      refetchProducts();
+      setSelectedAppForSync(null);
+    },
+    onError: (error) => {
+      setSyncResult({
+        type: "error",
+        message: error.message,
+      });
+    },
+  });
+
+  // Get apps with App Store Connect configured
+  const appsWithAppStoreConnect = apps?.filter(
+    (app) => app.bundleId
+  ) || [];
+
+  const handleSync = (appId: string) => {
+    setSyncResult(null);
+    syncFromAppStore.mutate({ appId, updateExisting: true });
+  };
 
   if (isLoading) {
     return (
@@ -70,6 +117,44 @@ export default function ProductsPage() {
           </p>
         </div>
       </div>
+
+      {/* Sync Result Message */}
+      {syncResult && (
+        <div
+          className={`p-4 rounded-xl flex items-start gap-3 ${
+            syncResult.type === "success"
+              ? "bg-green-500/10 border border-green-500/20"
+              : "bg-red-500/10 border border-red-500/20"
+          }`}
+        >
+          {syncResult.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
+          )}
+          <div className="flex-1">
+            <p
+              className={
+                syncResult.type === "success" ? "text-green-400" : "text-red-400"
+              }
+            >
+              {syncResult.message}
+            </p>
+            {syncResult.details && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Created: {syncResult.details.created} • Updated:{" "}
+                {syncResult.details.updated} • Skipped: {syncResult.details.skipped}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setSyncResult(null)}
+            className="p-1 hover:bg-background rounded"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Filter Badge */}
       {filterAppId && filterAppName && (
@@ -98,13 +183,93 @@ export default function ProductsPage() {
               </span>
             )}
           </h2>
-          <Link
-            href={`/dashboard/${orgId}/products/new`}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Product</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Sync from App Store Button */}
+            {appsWithAppStoreConnect.length > 0 && (
+              <div className="relative">
+                {appsWithAppStoreConnect.length === 1 ? (
+                  <button
+                    onClick={() => handleSync(appsWithAppStoreConnect[0].id)}
+                    disabled={syncFromAppStore.isPending}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm disabled:opacity-50"
+                  >
+                    {syncFromAppStore.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Apple className="w-4 h-4" />
+                    )}
+                    <span>Sync from App Store</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() =>
+                        setSelectedAppForSync(
+                          selectedAppForSync ? null : "open"
+                        )
+                      }
+                      disabled={syncFromAppStore.isPending}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm disabled:opacity-50"
+                    >
+                      {syncFromAppStore.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Apple className="w-4 h-4" />
+                      )}
+                      <span>Sync from App Store</span>
+                    </button>
+                    {selectedAppForSync === "open" && (
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden">
+                        <div className="p-2 border-b border-border bg-secondary/50">
+                          <p className="text-xs text-muted-foreground">
+                            Select an app to sync products from
+                          </p>
+                        </div>
+                        <div className="p-1">
+                          {appsWithAppStoreConnect.map((app) => (
+                            <button
+                              key={app.id}
+                              onClick={() => {
+                                setSelectedAppForSync(null);
+                                handleSync(app.id);
+                              }}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <Apple className="w-4 h-4 text-blue-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">
+                                  {app.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {app.bundleId}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+            <Link
+              href={`/dashboard/${orgId}/products/import`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import</span>
+            </Link>
+            <Link
+              href={`/dashboard/${orgId}/products/new`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product</span>
+            </Link>
+          </div>
         </div>
 
         {!filteredProducts || filteredProducts.length === 0 ? (

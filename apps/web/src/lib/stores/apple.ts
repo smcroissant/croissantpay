@@ -103,7 +103,11 @@ export class AppleStoreClient {
       "ES256"
     );
 
-    const jwt = await new jose.SignJWT({})
+    // App Store Server API requires 'bid' claim (NOT 'sub')
+    // See: https://developer.apple.com/documentation/appstoreserverapi/generating_tokens_for_api_requests
+    const jwt = await new jose.SignJWT({
+      bid: this.config.bundleId, // Bundle ID must be in 'bid' claim
+    })
       .setProtectedHeader({
         alg: "ES256",
         kid: this.config.keyId,
@@ -113,7 +117,6 @@ export class AppleStoreClient {
       .setIssuedAt()
       .setExpirationTime("1h")
       .setAudience("appstoreconnect-v1")
-      .setSubject(this.config.bundleId)
       .sign(privateKey);
 
     return jwt;

@@ -5,6 +5,11 @@ import { eq } from "drizzle-orm";
 import { checkRateLimit, checkOrganizationLimits } from "./rate-limit";
 import { incrementApiRequests } from "@/lib/services/usage";
 import { isCloudMode } from "@/lib/config";
+import {
+  logApiRequest,
+  extractRequestInfo,
+  headersToObject,
+} from "@/lib/services/api-logs";
 
 export interface ApiContext {
   app: typeof app.$inferSelect;
@@ -97,8 +102,44 @@ export async function withApiKey(
     await incrementApiRequests(foundApp.organizationId);
   }
 
+  // Capture request info for logging
+  const startTime = Date.now();
+  const requestInfo = extractRequestInfo(request.headers);
+  const url = new URL(request.url);
+  let requestBody: Record<string, unknown> | undefined;
+  
+  // Try to get request body for logging
+  try {
+    const clonedRequest = request.clone();
+    requestBody = await clonedRequest.json();
+  } catch {
+    // No body or not JSON
+  }
+
   // Execute handler and add rate limit headers
-  const response = await handler({ app: foundApp, isSecretKey });
+  let response: Response;
+  let responseBody: Record<string, unknown> | undefined;
+  let errorMessage: string | undefined;
+
+  try {
+    response = await handler({ app: foundApp, isSecretKey });
+    
+    // Try to capture response body for logging
+    try {
+      const clonedResponse = response.clone();
+      responseBody = await clonedResponse.json();
+    } catch {
+      // Not JSON response
+    }
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : "Unknown error";
+    response = NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+
+  const responseTime = Date.now() - startTime;
   
   // Clone response to add headers
   const newResponse = new Response(response.body, {
@@ -110,6 +151,25 @@ export async function withApiKey(
   newResponse.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
   newResponse.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
   newResponse.headers.set("X-RateLimit-Reset", rateLimitResult.resetAt.toISOString());
+
+  // Log the request asynchronously (don't await)
+  logApiRequest({
+    organizationId: foundApp.organizationId,
+    appId: foundApp.id,
+    method: request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    headers: headersToObject(request.headers),
+    body: requestBody,
+    statusCode: newResponse.status,
+    responseBody,
+    responseTime,
+    ipAddress: requestInfo.ipAddress || undefined,
+    userAgent: requestInfo.userAgent || undefined,
+    apiKeyType: requestInfo.apiKeyType || undefined,
+    apiKeyPrefix: requestInfo.apiKeyPrefix || undefined,
+    errorMessage,
+  }).catch((err) => console.error("[API Log] Async log error:", err));
   
   return newResponse;
 }

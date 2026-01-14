@@ -6,7 +6,7 @@ import {
   offering,
   offeringProduct,
 } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 export interface CreateProductInput {
   appId: string;
@@ -278,3 +278,99 @@ export async function getOfferingProducts(
   return links.map((l) => l.product);
 }
 
+// =====================
+// BULK IMPORT
+// =====================
+
+export interface BulkImportProductInput {
+  appId: string;
+  identifier: string;
+  storeProductId: string;
+  platform: "ios" | "android";
+  type: "consumable" | "non_consumable" | "auto_renewable_subscription" | "non_renewing_subscription";
+  displayName: string;
+  description?: string;
+  subscriptionGroupId?: string;
+  trialDuration?: string;
+  subscriptionPeriod?: string;
+}
+
+export interface BulkImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ storeProductId: string; error: string }>;
+}
+
+export async function bulkImportProducts(
+  products: BulkImportProductInput[],
+  updateExisting: boolean = false
+): Promise<BulkImportResult> {
+  const result: BulkImportResult = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  for (const p of products) {
+    try {
+      // Check if product already exists
+      const [existing] = await db
+        .select()
+        .from(product)
+        .where(
+          and(
+            eq(product.appId, p.appId),
+            eq(product.storeProductId, p.storeProductId),
+            eq(product.platform, p.platform)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        if (updateExisting) {
+          // Update existing product
+          await db
+            .update(product)
+            .set({
+              identifier: p.identifier,
+              displayName: p.displayName,
+              description: p.description,
+              type: p.type,
+              subscriptionGroupId: p.subscriptionGroupId,
+              trialDuration: p.trialDuration,
+              subscriptionPeriod: p.subscriptionPeriod,
+              updatedAt: new Date(),
+            })
+            .where(eq(product.id, existing.id));
+          result.updated++;
+        } else {
+          result.skipped++;
+        }
+      } else {
+        // Create new product
+        await db.insert(product).values({
+          appId: p.appId,
+          identifier: p.identifier,
+          storeProductId: p.storeProductId,
+          platform: p.platform,
+          type: p.type,
+          displayName: p.displayName,
+          description: p.description,
+          subscriptionGroupId: p.subscriptionGroupId,
+          trialDuration: p.trialDuration,
+          subscriptionPeriod: p.subscriptionPeriod,
+        });
+        result.created++;
+      }
+    } catch (error) {
+      result.errors.push({
+        storeProductId: p.storeProductId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return result;
+}

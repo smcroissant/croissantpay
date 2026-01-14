@@ -6,6 +6,7 @@ import { promoCodesRouter } from "./promo-codes";
 import { experimentsRouter } from "./experiments";
 import { organizationsRouter } from "./organizations";
 import { usersRouter } from "./users";
+import { apiLogsRouter } from "./api-logs";
 
 /**
  * This is the primary router for your server.
@@ -20,6 +21,7 @@ export const appRouter = createTRPCRouter({
   experiments: experimentsRouter,
   organizations: organizationsRouter,
   users: usersRouter,
+  apiLogs: apiLogsRouter,
 });
 
 // Export type router type signature
