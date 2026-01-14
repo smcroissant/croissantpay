@@ -206,7 +206,7 @@ export default function EditPromoCodePage() {
               <label className="block text-xs text-muted-foreground mb-1">
                 Redemptions
               </label>
-              <p className="font-medium">{promoCode.redemptionCount || 0}</p>
+              <p className="font-medium">{promoCode.currentRedemptions || 0}</p>
             </div>
             <div>
               <label className="block text-xs text-muted-foreground mb-1">

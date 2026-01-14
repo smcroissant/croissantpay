@@ -160,16 +160,18 @@ export default async function SubscribersPage({
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {sub.platform === "ios" ? (
+                      {activeSubscription?.platform === "ios" ? (
                         <div className="flex items-center gap-1.5 text-blue-400">
                           <Apple className="w-4 h-4" />
                           <span className="text-sm">iOS</span>
                         </div>
-                      ) : (
+                      ) : activeSubscription?.platform === "android" ? (
                         <div className="flex items-center gap-1.5 text-green-400">
                           <Play className="w-4 h-4" />
                           <span className="text-sm">Android</span>
                         </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">

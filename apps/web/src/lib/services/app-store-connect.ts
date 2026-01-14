@@ -215,10 +215,11 @@ export class AppStoreConnectClient {
     let nextUrl: string | null = `/apps/${appId}/inAppPurchasesV2?limit=200`;
 
     while (nextUrl) {
-      const response = await this.request<{
+      type IAPResponse = {
         data: AppStoreProduct[];
         links?: { next?: string };
-      }>(nextUrl);
+      };
+      const response: IAPResponse = await this.request<IAPResponse>(nextUrl);
 
       allProducts.push(...response.data);
 

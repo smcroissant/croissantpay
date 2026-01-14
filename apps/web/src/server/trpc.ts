@@ -104,12 +104,15 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 
 /**
  * Procedure that requires access to a specific app
+ * Note: This validates app access after input is parsed via .input() in the procedure chain
  */
 export const appProcedure = protectedProcedure.use(
-  async ({ ctx, next, rawInput }) => {
-    const input = rawInput as { appId?: string };
+  async (opts) => {
+    const { ctx, next } = opts;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input = (opts as any).rawInput as { appId?: string } | undefined;
 
-    if (!input.appId) {
+    if (!input?.appId) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "appId is required",

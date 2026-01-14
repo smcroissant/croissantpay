@@ -203,7 +203,7 @@ function BlogContent({ content }: { content: string }) {
   // Parse markdown-like content to JSX
   const lines = content.trim().split("\n");
   const elements: React.ReactNode[] = [];
-  let currentList: string[] = [];
+  let currentList: React.ReactNode[] = [];
   let currentCodeBlock: string[] = [];
   let inCodeBlock = false;
   let codeLanguage = "";

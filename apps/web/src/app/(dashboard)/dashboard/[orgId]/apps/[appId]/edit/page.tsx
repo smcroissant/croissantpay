@@ -353,6 +353,12 @@ function GeneralTab({
   );
 }
 
+type ShowSecretsState = {
+  applePrivateKey: boolean;
+  appleSharedSecret: boolean;
+  googleServiceAccount: boolean;
+};
+
 function AppleTab({
   appId,
   formData,
@@ -363,8 +369,8 @@ function AppleTab({
   appId: string;
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
-  showSecrets: Record<string, boolean>;
-  setShowSecrets: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  showSecrets: ShowSecretsState;
+  setShowSecrets: React.Dispatch<React.SetStateAction<ShowSecretsState>>;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -837,8 +843,8 @@ function GoogleTab({
 }: {
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
-  showSecrets: Record<string, boolean>;
-  setShowSecrets: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  showSecrets: ShowSecretsState;
+  setShowSecrets: React.Dispatch<React.SetStateAction<ShowSecretsState>>;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);

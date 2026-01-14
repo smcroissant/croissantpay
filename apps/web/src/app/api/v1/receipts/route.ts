@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       // Determine if it's a subscription
       const isSubscription =
         subscriptionId !== undefined ||
-        (productId && productId.includes("subscription"));
+        (productId ? productId.includes("subscription") : false);
 
       const validationResult = await validateAndroidReceipt(
         app,

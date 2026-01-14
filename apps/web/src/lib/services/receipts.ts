@@ -515,8 +515,8 @@ async function processAndroidPurchase(
     transactionId: googlePurchase.orderId,
     originalTransactionId: purchaseToken,
     purchaseDate: new Date(parseInt(googlePurchase.purchaseTimeMillis)),
-    priceAmountMicros: parseInt(googlePurchase.priceAmountMicros || "0"),
-    priceCurrencyCode: googlePurchase.priceCurrencyCode,
+    priceAmountMicros: 0, // Google doesn't return price for one-time products
+    priceCurrencyCode: "USD",
     environment: googlePurchase.purchaseType === 0 ? "sandbox" : "production",
     storeResponse: googlePurchase as unknown as Record<string, unknown>,
   });

@@ -216,11 +216,21 @@ export async function fetchWebhookEvents(limit: number = 50) {
   for (const appData of apps) {
     const events = await getRecentWebhookEvents(appData.id, limit);
     for (const event of events) {
+      // Derive status from processedAt and error fields
+      let status: string;
+      if (event.error) {
+        status = "failed";
+      } else if (event.processedAt) {
+        status = "processed";
+      } else {
+        status = "pending";
+      }
+      
       allEvents.push({
         id: event.id,
         eventType: event.eventType,
-        source: event.source,
-        status: event.status,
+        source: event.platform, // platform is 'ios' or 'android'
+        status,
         createdAt: event.createdAt,
       });
     }
@@ -256,8 +266,11 @@ export async function fetchPromoCodes(appId?: string) {
   const allPromoCodes: Array<{
     id: string;
     code: string;
+    name: string;
     type: string;
     discountAmount: number | null;
+    discountPercent: number | null;
+    freeTrialDays: number | null;
     isActive: boolean;
     maxRedemptions: number | null;
     redemptionCount: number;
@@ -270,8 +283,11 @@ export async function fetchPromoCodes(appId?: string) {
       allPromoCodes.push({
         id: promo.id,
         code: promo.code,
+        name: promo.name,
         type: promo.type,
         discountAmount: promo.discountAmount,
+        discountPercent: promo.discountPercent,
+        freeTrialDays: promo.freeTrialDays,
         isActive: promo.isActive,
         maxRedemptions: promo.maxRedemptions,
         redemptionCount: promo.currentRedemptions,

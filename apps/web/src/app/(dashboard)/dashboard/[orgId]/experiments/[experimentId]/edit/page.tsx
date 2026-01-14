@@ -576,7 +576,7 @@ export default function EditExperimentPage() {
                     <option value="">Use default offering</option>
                     {offerings?.map((offering) => (
                       <option key={offering.id} value={offering.id}>
-                        {offering.name} {offering.isDefault && "(default)"}
+                        {offering.displayName} {offering.isCurrent && "(default)"}
                       </option>
                     ))}
                   </select>

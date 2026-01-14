@@ -147,8 +147,12 @@ export const promoCodesRouter = createTRPCRouter({
         });
       }
 
-      const { promoCodeId, ...updates } = input;
-      return updatePromoCode(promoCodeId, updates);
+      const { promoCodeId, expiresAt, ...updates } = input;
+      // Convert null to undefined for expiresAt
+      return updatePromoCode(promoCodeId, {
+        ...updates,
+        expiresAt: expiresAt ?? undefined,
+      });
     }),
 
   // Delete promo code
