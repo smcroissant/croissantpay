@@ -14,6 +14,15 @@ export function generateApiKey(prefix: string = "mx"): string {
   return `${prefix}_${key}`;
 }
 
+export function generateWebhookId(platform: "apple" | "google"): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let id = "";
+  for (let i = 0; i < 24; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `wh_${platform}_${id}`;
+}
+
 export function formatCurrency(
   amountMicros: number,
   currencyCode: string

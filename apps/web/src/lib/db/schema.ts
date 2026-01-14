@@ -167,7 +167,10 @@ export const app = pgTable(
     appleSharedSecret: text("apple_shared_secret"), // encrypted
     // Google Play Configuration
     googleServiceAccount: text("google_service_account"), // encrypted JSON
-    // Settings
+    // Webhook Configuration
+    appleWebhookId: text("apple_webhook_id").unique(), // Unique ID for Apple webhook URL
+    googleWebhookId: text("google_webhook_id").unique(), // Unique ID for Google webhook URL
+    // Settings (for forwarding to your own webhook)
     webhookUrl: text("webhook_url"),
     webhookSecret: text("webhook_secret"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

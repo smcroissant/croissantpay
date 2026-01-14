@@ -4,12 +4,13 @@ import {
   app,
   webhookEvent,
   subscription,
-  product,
   subscriber,
+  product,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { AppleStoreClient, AppleNotificationPayload } from "@/lib/stores/apple";
 import { refreshEntitlements } from "@/lib/services/entitlements";
+import { getAppByAppleWebhookId } from "@/lib/services/apps";
 
 // Helper to find product by store product ID
 async function findProductByStoreId(appId: string, storeProductId: string) {
@@ -27,9 +28,25 @@ async function findProductByStoreId(appId: string, storeProductId: string) {
   return foundProduct;
 }
 
-// Apple App Store Server Notifications v2
-export async function POST(request: NextRequest) {
+// Apple App Store Server Notifications v2 with secure webhook ID
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ webhookId: string }> }
+) {
   try {
+    const { webhookId } = await params;
+
+    // Find app by webhook ID
+    const appConfig = await getAppByAppleWebhookId(webhookId);
+
+    if (!appConfig) {
+      console.warn(`No app found for Apple webhook ID: ${webhookId}`);
+      return NextResponse.json(
+        { error: "Invalid webhook ID" },
+        { status: 404 }
+      );
+    }
+
     const body = await request.json();
     const signedPayload = body.signedPayload;
 
@@ -54,19 +71,16 @@ export async function POST(request: NextRequest) {
     );
 
     const { notificationType, subtype, data, notificationUUID } = payload;
-    const bundleId = data.bundleId;
 
-    // Find the app by bundle ID
-    const [appConfig] = await db
-      .select()
-      .from(app)
-      .where(eq(app.bundleId, bundleId))
-      .limit(1);
-
-    if (!appConfig) {
-      console.warn(`No app found for bundle ID: ${bundleId}`);
-      // Return 200 to prevent Apple from retrying
-      return NextResponse.json({ received: true });
+    // Verify bundle ID matches the app (extra security check)
+    if (appConfig.bundleId && data.bundleId !== appConfig.bundleId) {
+      console.warn(
+        `Bundle ID mismatch: expected ${appConfig.bundleId}, got ${data.bundleId}`
+      );
+      return NextResponse.json(
+        { error: "Bundle ID mismatch" },
+        { status: 400 }
+      );
     }
 
     // Log the webhook event

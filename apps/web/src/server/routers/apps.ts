@@ -13,6 +13,7 @@ import {
   deleteApp,
   regenerateApiKeys,
   configureWebhook,
+  regenerateWebhookIds,
 } from "@/lib/services/apps";
 import { getWebhookStats } from "@/lib/services/webhooks";
 import { canCreateApp } from "@/lib/api/plan-limits";
@@ -191,6 +192,25 @@ export const appsRouter = createTRPCRouter({
         input.webhookUrl
       );
       return { webhookSecret };
+    }),
+
+  // Regenerate webhook ID for Apple or Google
+  regenerateWebhookId: protectedProcedure
+    .input(
+      z.object({
+        appId: z.string().uuid(),
+        platform: z.enum(["apple", "google"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const app = await getApp(input.appId);
+
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      const result = await regenerateWebhookIds(input.appId, input.platform);
+      return result;
     }),
 });
 

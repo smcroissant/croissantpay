@@ -5,7 +5,7 @@ import {
   organizationMember,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { generateApiKey } from "@/lib/utils";
+import { generateApiKey, generateWebhookId } from "@/lib/utils";
 
 export interface CreateAppInput {
   organizationId: string;
@@ -21,6 +21,7 @@ export interface UpdateAppInput {
   appleTeamId?: string | null;
   appleKeyId?: string | null;
   appleIssuerId?: string | null;
+  appleVendorNumber?: string | null;
   applePrivateKey?: string | null;
   appleSharedSecret?: string | null;
   googleServiceAccount?: string | null;
@@ -30,6 +31,8 @@ export interface UpdateAppInput {
 export async function createApp(input: CreateAppInput): Promise<typeof app.$inferSelect> {
   const publicKey = generateApiKey("mxp");
   const secretKey = generateApiKey("mxs");
+  const appleWebhookId = generateWebhookId("apple");
+  const googleWebhookId = generateWebhookId("google");
 
   const [newApp] = await db
     .insert(app)
@@ -40,6 +43,8 @@ export async function createApp(input: CreateAppInput): Promise<typeof app.$infe
       packageName: input.packageName,
       publicKey,
       secretKey,
+      appleWebhookId,
+      googleWebhookId,
     })
     .returning();
 
@@ -155,6 +160,53 @@ export async function configureWebhook(
     .where(eq(app.id, appId));
 
   return webhookSecret;
+}
+
+export async function regenerateWebhookIds(
+  appId: string,
+  platform?: "apple" | "google"
+): Promise<{ appleWebhookId?: string; googleWebhookId?: string }> {
+  const updates: { appleWebhookId?: string; googleWebhookId?: string; updatedAt: Date } = {
+    updatedAt: new Date(),
+  };
+
+  if (!platform || platform === "apple") {
+    updates.appleWebhookId = generateWebhookId("apple");
+  }
+  if (!platform || platform === "google") {
+    updates.googleWebhookId = generateWebhookId("google");
+  }
+
+  await db.update(app).set(updates).where(eq(app.id, appId));
+
+  return {
+    appleWebhookId: updates.appleWebhookId,
+    googleWebhookId: updates.googleWebhookId,
+  };
+}
+
+export async function getAppByAppleWebhookId(
+  webhookId: string
+): Promise<typeof app.$inferSelect | null> {
+  const [foundApp] = await db
+    .select()
+    .from(app)
+    .where(eq(app.appleWebhookId, webhookId))
+    .limit(1);
+
+  return foundApp || null;
+}
+
+export async function getAppByGoogleWebhookId(
+  webhookId: string
+): Promise<typeof app.$inferSelect | null> {
+  const [foundApp] = await db
+    .select()
+    .from(app)
+    .where(eq(app.googleWebhookId, webhookId))
+    .limit(1);
+
+  return foundApp || null;
 }
 
 // Check if user has access to app
