@@ -1,54 +1,76 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
-import {
-  getUserOrganizations,
-  createOrganization,
-  getOrganization,
-  updateOrganization,
-  getOrganizationBySlug,
-  getOrganizationMembers,
-  removeOrganizationMember,
-  updateMemberRole,
-  createInvitation,
-  getPendingInvitations,
-  cancelInvitation,
-  acceptInvitation,
-  getInvitationsByEmail,
-  deleteOrganization,
-} from "@/lib/services/organizations";
 import { canAddTeamMember } from "@/lib/api/plan-limits";
-import {
-  getSubscriptionInfo,
-  createCheckoutSession,
-  createBillingPortalSession,
-} from "@/lib/services/stripe";
+import { createBillingPortalSession } from "@/lib/services/stripe";
 import { isCloudMode, PLANS, getPlanById } from "@/lib/config";
 import { getPlanLimitsContext, getUsageWarnings } from "@/lib/api/plan-limits";
+import { db } from "@/lib/db";
+import { organization, organizationMember, organizationInvitation, user } from "@/lib/db/schema";
+import { organizationBilling } from "@/lib/db/schema-billing";
+import { eq, and, gt, sql } from "drizzle-orm";
 
 export const organizationsRouter = createTRPCRouter({
-  // List user's organizations
+  // =====================
+  // ORGANIZATION CRUD
+  // =====================
+
+  // List user's organizations with roles
   list: protectedProcedure.query(async ({ ctx }) => {
-    return getUserOrganizations(ctx.user.id);
+    // Query from database to include role information
+    const memberships = await db
+      .select({
+        organization,
+        role: organizationMember.role,
+      })
+      .from(organizationMember)
+      .innerJoin(organization, eq(organizationMember.organizationId, organization.id))
+      .where(eq(organizationMember.userId, ctx.user.id));
+
+    return memberships.map((m) => ({
+      id: m.organization.id,
+      name: m.organization.name,
+      slug: m.organization.slug,
+      role: m.role,
+      createdAt: m.organization.createdAt,
+    }));
   }),
 
   // Get current organization
   current: protectedProcedure.query(async ({ ctx }) => {
-    return getOrganization(ctx.organizationId);
+    const [org] = await db
+      .select()
+      .from(organization)
+      .where(eq(organization.id, ctx.organizationId))
+      .limit(1);
+    return org || null;
   }),
 
-  // Get organization by ID
+  // Get organization by ID with role
   get: protectedProcedure
-    .input(z.object({ organizationId: z.string().uuid() }))
+    .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === input.organizationId);
-      
-      if (!org) {
+      // Check if user is a member
+      const [membership] = await db
+        .select({
+          organization,
+          role: organizationMember.role,
+        })
+        .from(organizationMember)
+        .innerJoin(organization, eq(organizationMember.organizationId, organization.id))
+        .where(
+          and(
+            eq(organizationMember.organizationId, input.organizationId),
+            eq(organizationMember.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!membership) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
       }
 
-      return org;
+      return { ...membership.organization, role: membership.role };
     }),
 
   // Create new organization
@@ -61,7 +83,12 @@ export const organizationsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Check if slug is already taken
-      const existing = await getOrganizationBySlug(input.slug);
+      const [existing] = await db
+        .select()
+        .from(organization)
+        .where(eq(organization.slug, input.slug))
+        .limit(1);
+
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
@@ -69,42 +96,56 @@ export const organizationsRouter = createTRPCRouter({
         });
       }
 
-      return createOrganization({
+      const now = new Date();
+      const orgId = crypto.randomUUID();
+
+      // Create organization
+      const [newOrg] = await db
+        .insert(organization)
+        .values({
+          id: orgId,
         name: input.name,
         slug: input.slug,
-        ownerId: ctx.user.id,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      // Add user as owner
+      await db.insert(organizationMember).values({
+        organizationId: orgId,
+        userId: ctx.user.id,
+        role: "owner",
+        createdAt: now,
       });
+
+      return { ...newOrg, role: "owner" };
     }),
 
   // Update organization
   update: protectedProcedure
     .input(
       z.object({
-        organizationId: z.string().uuid(),
+        organizationId: z.string(),
         name: z.string().min(1).max(100).optional(),
         slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user has access to this organization
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === input.organizationId);
-      
-      if (!org) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
-      }
+      // Check if slug is already taken by another org
+      if (input.slug) {
+        const [existing] = await db
+          .select()
+          .from(organization)
+          .where(
+            and(
+              eq(organization.slug, input.slug),
+              // Not the current org
+              sql`${organization.id} != ${input.organizationId}`
+            )
+          )
+          .limit(1);
 
-      // Only owners can update
-      if (org.role !== "owner") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only owners can update organization",
-        });
-      }
-
-      // Check if new slug is already taken
-      if (input.slug && input.slug !== org.slug) {
-        const existing = await getOrganizationBySlug(input.slug);
         if (existing) {
           throw new TRPCError({
             code: "CONFLICT",
@@ -113,15 +154,359 @@ export const organizationsRouter = createTRPCRouter({
         }
       }
 
-      const { organizationId, ...updates } = input;
-      return updateOrganization(organizationId, updates);
+      const updates: Partial<{ name: string; slug: string; updatedAt: Date }> = {
+        updatedAt: new Date(),
+      };
+      if (input.name) updates.name = input.name;
+      if (input.slug) updates.slug = input.slug;
+
+      const [updated] = await db
+        .update(organization)
+        .set(updates)
+        .where(eq(organization.id, input.organizationId))
+        .returning();
+
+      return updated;
+    }),
+
+  // Delete organization
+  delete: protectedProcedure
+    .input(z.object({ confirmName: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Get organization to verify name
+      const [org] = await db
+        .select()
+        .from(organization)
+        .where(eq(organization.id, ctx.organizationId))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+      }
+
+      if (input.confirmName !== org.name) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Organization name confirmation does not match",
+        });
+      }
+
+      // Delete organization (cascade deletes members, invitations, etc.)
+      await db.delete(organization).where(eq(organization.id, ctx.organizationId));
+
+      return { success: true };
+    }),
+
+  // =====================
+  // TEAM MANAGEMENT
+  // =====================
+
+  // List team members
+  listMembers: protectedProcedure.query(async ({ ctx }) => {
+    const members = await db
+      .select({
+        member: organizationMember,
+        user: user,
+      })
+      .from(organizationMember)
+      .innerJoin(user, eq(organizationMember.userId, user.id))
+      .where(eq(organizationMember.organizationId, ctx.organizationId));
+
+    return members.map((m) => ({
+      id: m.user.id,
+      memberId: m.member.id,
+      name: m.user.name,
+      email: m.user.email,
+      image: m.user.image,
+      role: m.member.role,
+    }));
+  }),
+
+  // List pending invitations
+  listInvitations: protectedProcedure.query(async ({ ctx }) => {
+    const invitations = await db
+      .select()
+      .from(organizationInvitation)
+      .where(
+        and(
+          eq(organizationInvitation.organizationId, ctx.organizationId),
+          eq(organizationInvitation.status, "pending"),
+          gt(organizationInvitation.expiresAt, new Date())
+        )
+      );
+
+    return invitations.map((i) => ({
+      id: i.id,
+      email: i.email,
+      role: i.role,
+      expiresAt: i.expiresAt,
+      createdAt: i.createdAt,
+    }));
+  }),
+
+  // Get user's pending invitations
+  myInvitations: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user.email) return [];
+
+    const invitations = await db
+      .select({
+        invitation: organizationInvitation,
+        organization: organization,
+      })
+      .from(organizationInvitation)
+      .innerJoin(organization, eq(organizationInvitation.organizationId, organization.id))
+      .where(
+        and(
+          eq(organizationInvitation.email, ctx.user.email.toLowerCase()),
+          eq(organizationInvitation.status, "pending"),
+          gt(organizationInvitation.expiresAt, new Date())
+        )
+      );
+
+    return invitations.map((i) => ({
+      id: i.invitation.id,
+      token: i.invitation.token, // Include token for URL-based acceptance
+      role: i.invitation.role,
+      organizationName: i.organization.name,
+      organizationSlug: i.organization.slug,
+      expiresAt: i.invitation.expiresAt,
+    }));
+  }),
+
+  // Invite a user (using database + Better Auth email)
+  inviteMember: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        role: z.enum(["admin", "member"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check plan limits
+      const canInvite = await canAddTeamMember(ctx.organizationId);
+      if (!canInvite.allowed) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: canInvite.error?.message || "Team member limit reached. Please upgrade your plan.",
+        });
+      }
+
+      // Create invitation directly in database
+      const invitationId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      await db.insert(organizationInvitation).values({
+        id: invitationId,
+        organizationId: ctx.organizationId,
+        email: input.email.toLowerCase(),
+        role: input.role,
+        status: "pending",
+        token: crypto.randomUUID(),
+        invitedBy: ctx.user.id,
+        expiresAt,
+      });
+
+      return {
+        success: true,
+        message: `Invitation sent to ${input.email}`,
+      };
+    }),
+
+  // Accept an invitation by ID or token
+  acceptInvitation: protectedProcedure
+    .input(z.object({ invitationId: z.string().optional(), token: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      // Find invitation by ID or token
+      let invitation;
+      if (input.invitationId) {
+        [invitation] = await db
+          .select()
+          .from(organizationInvitation)
+          .where(eq(organizationInvitation.id, input.invitationId))
+          .limit(1);
+      } else if (input.token) {
+        [invitation] = await db
+          .select()
+          .from(organizationInvitation)
+          .where(eq(organizationInvitation.token, input.token))
+          .limit(1);
+      }
+
+      if (!invitation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invitation not found" });
+      }
+
+      if (invitation.status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation is no longer valid" });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation has expired" });
+      }
+
+      // Check if user is already a member
+      const [existing] = await db
+        .select()
+        .from(organizationMember)
+        .where(
+          and(
+            eq(organizationMember.organizationId, invitation.organizationId),
+            eq(organizationMember.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        // Add user as member
+        await db.insert(organizationMember).values({
+          organizationId: invitation.organizationId,
+          userId: ctx.user.id,
+          role: invitation.role,
+          createdAt: new Date(),
+        });
+      }
+
+      // Mark invitation as accepted
+      await db
+        .update(organizationInvitation)
+        .set({ status: "accepted" })
+        .where(eq(organizationInvitation.id, invitation.id));
+
+      return { success: true };
+    }),
+
+  // Reject an invitation
+  rejectInvitation: protectedProcedure
+    .input(z.object({ invitationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(organizationInvitation)
+        .set({ status: "rejected" })
+        .where(eq(organizationInvitation.id, input.invitationId));
+
+      return { success: true };
+    }),
+
+  // Cancel an invitation
+  cancelInvitation: protectedProcedure
+    .input(z.object({ invitationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(organizationInvitation)
+        .set({ status: "canceled" })
+        .where(
+          and(
+            eq(organizationInvitation.id, input.invitationId),
+            eq(organizationInvitation.organizationId, ctx.organizationId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Remove a member (using database)
+  removeMember: protectedProcedure
+    .input(z.object({ memberId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Delete member from database
+      await db
+        .delete(organizationMember)
+        .where(
+          and(
+            eq(organizationMember.organizationId, ctx.organizationId),
+            eq(organizationMember.id, input.memberId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Update member role
+  updateMemberRole: protectedProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        role: z.enum(["admin", "member"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(organizationMember)
+        .set({ role: input.role })
+        .where(
+          and(
+            eq(organizationMember.id, input.memberId),
+            eq(organizationMember.organizationId, ctx.organizationId)
+          )
+        );
+
+      return { success: true };
+    }),
+
+  // Leave organization (using database)
+  leaveOrganization: protectedProcedure.mutation(async ({ ctx }) => {
+    // Get member record
+    const [member] = await db
+      .select()
+      .from(organizationMember)
+      .where(
+        and(
+          eq(organizationMember.organizationId, ctx.organizationId),
+          eq(organizationMember.userId, ctx.user.id)
+        )
+      )
+      .limit(1);
+
+    if (!member) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Not a member of this organization" });
+    }
+
+    if (member.role === "owner") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Owners cannot leave the organization. Transfer ownership first or delete the organization.",
+      });
+    }
+
+    // Delete member from database
+    await db
+      .delete(organizationMember)
+      .where(eq(organizationMember.id, member.id));
+
+    return { success: true };
+  }),
+
+  // Set active organization (handled client-side via cookie)
+  setActive: protectedProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user is a member of the organization
+      const [member] = await db
+        .select()
+        .from(organizationMember)
+        .where(
+          and(
+            eq(organizationMember.organizationId, input.organizationId),
+            eq(organizationMember.userId, ctx.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!member) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not a member of this organization",
+        });
+      }
+
+      // Client sets the cookie, server just validates
+      return { success: true };
     }),
 
   // =====================
   // BILLING (Cloud Mode Only)
   // =====================
 
-  // Get billing/subscription info
   getBilling: protectedProcedure.query(async ({ ctx }) => {
     if (!isCloudMode()) {
       return {
@@ -132,7 +517,22 @@ export const organizationsRouter = createTRPCRouter({
       };
     }
 
-    const subscription = await getSubscriptionInfo(ctx.organizationId);
+    const [billing] = await db
+      .select()
+      .from(organizationBilling)
+      .where(eq(organizationBilling.organizationId, ctx.organizationId))
+      .limit(1);
+
+    const subscription = billing
+      ? {
+          planId: billing.planId,
+          status: billing.status,
+          billingCycle: billing.billingCycle,
+          currentPeriodEnd: billing.currentPeriodEnd,
+          cancelAtPeriodEnd: billing.cancelAtPeriodEnd,
+        }
+      : null;
+
     const currentPlan = subscription ? getPlanById(subscription.planId) : getPlanById("free");
 
     return {
@@ -143,7 +543,6 @@ export const organizationsRouter = createTRPCRouter({
     };
   }),
 
-  // Get current usage and limits
   getUsage: protectedProcedure.query(async ({ ctx }) => {
     const context = await getPlanLimitsContext(ctx.organizationId);
     
@@ -158,7 +557,6 @@ export const organizationsRouter = createTRPCRouter({
 
     const warnings = await getUsageWarnings(ctx.organizationId);
 
-    // Calculate percentages
     const getPercentage = (current: number, limit: number) => {
       if (limit === -1) return 0;
       return Math.min(100, Math.round((current / limit) * 100));
@@ -182,45 +580,31 @@ export const organizationsRouter = createTRPCRouter({
     };
   }),
 
-  // Create checkout session for upgrading
-  createCheckout: protectedProcedure
-    .input(
-      z.object({
-        planId: z.string(),
-        billingCycle: z.enum(["monthly", "yearly"]),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
+  validateBillingAccess: protectedProcedure.query(async ({ ctx }) => {
       if (!isCloudMode()) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Billing only available in cloud mode",
-        });
-      }
+      return { allowed: false, reason: "Billing only available in cloud mode" };
+    }
 
-      // Verify user is owner
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!org || org.role !== "owner") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only organization owners can manage billing",
-        });
-      }
+    // Check if user is owner
+    const [member] = await db
+      .select()
+      .from(organizationMember)
+      .where(
+        and(
+          eq(organizationMember.organizationId, ctx.organizationId),
+          eq(organizationMember.userId, ctx.user.id),
+          eq(organizationMember.role, "owner")
+        )
+      )
+      .limit(1);
 
-      const url = await createCheckoutSession({
-        organizationId: ctx.organizationId,
-        planId: input.planId,
-        billingCycle: input.billingCycle,
-        successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${ctx.organizationId}/settings?billing=success`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${ctx.organizationId}/settings?billing=canceled`,
-      });
+    if (!member) {
+      return { allowed: false, reason: "Only organization owners can manage billing" };
+    }
 
-      return { url };
-    }),
+    return { allowed: true };
+  }),
 
-  // Create billing portal session
   createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
     if (!isCloudMode()) {
       throw new TRPCError({
@@ -229,19 +613,21 @@ export const organizationsRouter = createTRPCRouter({
       });
     }
 
-    // Verify user is owner
-    const orgs = await getUserOrganizations(ctx.user.id);
-    const org = orgs.find((o) => o.id === ctx.organizationId);
-    
-    if (!org || org.role !== "owner") {
+    const [billing] = await db
+      .select()
+      .from(organizationBilling)
+      .where(eq(organizationBilling.organizationId, ctx.organizationId))
+      .limit(1);
+
+    if (!billing?.stripeCustomerId) {
       throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Only organization owners can manage billing",
+        code: "NOT_FOUND",
+        message: "No billing record found. Please upgrade to a paid plan first.",
       });
     }
 
     const url = await createBillingPortalSession(
-      ctx.organizationId,
+      billing.stripeCustomerId,
       `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${ctx.organizationId}/settings`
     );
 
@@ -249,255 +635,52 @@ export const organizationsRouter = createTRPCRouter({
   }),
 
   // =====================
-  // TEAM MANAGEMENT
+  // ONBOARDING (custom fields)
   // =====================
 
-  // List team members
-  listMembers: protectedProcedure.query(async ({ ctx }) => {
-    const members = await getOrganizationMembers(ctx.organizationId);
-    return members.map((m) => ({
-      id: m.user.id,
-      name: m.user.name,
-      email: m.user.email,
-      image: m.user.image,
-      role: m.role,
-    }));
-  }),
+  getOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
+    const [org] = await db
+      .select()
+      .from(organization)
+      .where(eq(organization.id, ctx.organizationId))
+      .limit(1);
 
-  // List pending invitations
-  listInvitations: protectedProcedure.query(async ({ ctx }) => {
-    const invitations = await getPendingInvitations(ctx.organizationId);
-    return invitations.map((i) => ({
-      id: i.id,
-      email: i.email,
-      role: i.role,
-      invitedBy: i.inviter.name || i.inviter.email,
-      expiresAt: i.expiresAt,
-      createdAt: i.createdAt,
-    }));
-  }),
-
-  // Get user's pending invitations
-  myInvitations: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user.email) return [];
-    const invitations = await getInvitationsByEmail(ctx.user.email);
-    return invitations.map((i) => ({
-      id: i.id,
-      token: i.token,
-      role: i.role,
-      organizationName: i.organization.name,
-      organizationSlug: i.organization.slug,
-      expiresAt: i.expiresAt,
-    }));
-  }),
-
-  // Invite a user
-  inviteMember: protectedProcedure
-    .input(
-      z.object({
-        email: z.string().email(),
-        role: z.enum(["admin", "member"]),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Verify user is owner or admin
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!org || (org.role !== "owner" && org.role !== "admin")) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only owners and admins can invite members",
-        });
-      }
-
-      // Check plan limits
-      const canInvite = await canAddTeamMember(ctx.organizationId);
-      if (!canInvite.allowed) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: canInvite.error?.message || "Team member limit reached. Please upgrade your plan.",
-        });
-      }
-
-      // Create invitation
-      const invitation = await createInvitation({
-        organizationId: ctx.organizationId,
-        email: input.email,
-        role: input.role,
-        invitedBy: ctx.user.id,
-      });
-
-      // TODO: Send invitation email
-      // For now, just return the invitation token (in production, send via email)
-      const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invitation.token}`;
+    if (!org) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+    }
 
       return { 
-        success: true, 
-        inviteUrl,
-        message: `Invitation sent to ${input.email}`,
+      completed: org.onboardingCompleted,
+      step: org.onboardingStep,
       };
     }),
 
-  // Accept an invitation
-  acceptInvitation: protectedProcedure
-    .input(z.object({ token: z.string() }))
+  updateOnboardingProgress: protectedProcedure
+    .input(z.object({ step: z.number().min(0).max(7) }))
     .mutation(async ({ ctx, input }) => {
-      const success = await acceptInvitation(input.token, ctx.user.id);
-      
-      if (!success) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Invalid or expired invitation",
-        });
-      }
+      await db
+        .update(organization)
+        .set({ onboardingStep: input.step, updatedAt: new Date() })
+        .where(eq(organization.id, ctx.organizationId));
 
       return { success: true };
     }),
 
-  // Cancel an invitation
-  cancelInvitation: protectedProcedure
-    .input(z.object({ invitationId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      // Verify user is owner or admin
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!org || (org.role !== "owner" && org.role !== "admin")) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only owners and admins can cancel invitations",
-        });
-      }
+  completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+    await db
+      .update(organization)
+      .set({ onboardingCompleted: true, onboardingStep: 7, updatedAt: new Date() })
+      .where(eq(organization.id, ctx.organizationId));
 
-      await cancelInvitation(input.invitationId);
-      return { success: true };
-    }),
-
-  // Remove a member
-  removeMember: protectedProcedure
-    .input(z.object({ userId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      // Verify user is owner
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!org || org.role !== "owner") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only owners can remove members",
-        });
-      }
-
-      // Can't remove yourself as owner
-      if (input.userId === ctx.user.id) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "You cannot remove yourself from the organization",
-        });
-      }
-
-      await removeOrganizationMember(ctx.organizationId, input.userId);
-      return { success: true };
-    }),
-
-  // Update member role
-  updateMemberRole: protectedProcedure
-    .input(
-      z.object({
-        userId: z.string(),
-        role: z.enum(["admin", "member"]),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Verify user is owner
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const org = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!org || org.role !== "owner") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only owners can change member roles",
-        });
-      }
-
-      // Can't change owner's role
-      if (input.userId === ctx.user.id) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "You cannot change your own role",
-        });
-      }
-
-      await updateMemberRole(ctx.organizationId, input.userId, input.role);
-      return { success: true };
-    }),
-
-  // Leave organization
-  leaveOrganization: protectedProcedure.mutation(async ({ ctx }) => {
-    // Verify user is not the owner
-    const orgs = await getUserOrganizations(ctx.user.id);
-    const org = orgs.find((o) => o.id === ctx.organizationId);
-    
-    if (!org) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Organization not found",
-      });
-    }
-
-    if (org.role === "owner") {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Owners cannot leave the organization. Transfer ownership first or delete the organization.",
-      });
-    }
-
-    await removeOrganizationMember(ctx.organizationId, ctx.user.id);
     return { success: true };
   }),
 
-  // Delete organization
-  delete: protectedProcedure
-    .input(
-      z.object({
-        confirmName: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Get organization details
-      const org = await getOrganization(ctx.organizationId);
-      
-      if (!org) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Organization not found",
-        });
-      }
-
-      // Verify user is owner
-      const orgs = await getUserOrganizations(ctx.user.id);
-      const userOrg = orgs.find((o) => o.id === ctx.organizationId);
-      
-      if (!userOrg || userOrg.role !== "owner") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only organization owners can delete the organization",
-        });
-      }
-
-      // Verify name confirmation
-      if (input.confirmName !== org.name) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Organization name confirmation does not match",
-        });
-      }
-
-      // Delete the organization (cascades to members, apps, etc.)
-      await deleteOrganization(ctx.organizationId);
+  restartOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+    await db
+      .update(organization)
+      .set({ onboardingCompleted: false, onboardingStep: 0, updatedAt: new Date() })
+      .where(eq(organization.id, ctx.organizationId));
 
       return { success: true };
     }),
 });
-

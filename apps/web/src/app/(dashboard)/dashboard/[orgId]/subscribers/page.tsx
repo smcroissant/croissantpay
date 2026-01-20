@@ -112,6 +112,9 @@ export default async function SubscribersPage({
                   Platform
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                  Environment
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                   Created
                 </th>
               </tr>
@@ -133,9 +136,6 @@ export default async function SubscribersPage({
                       >
                         {sub.originalAppUserId}
                       </Link>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {sub.id.substring(0, 8)}...
-                      </p>
                     </td>
                     <td className="px-6 py-4">
                       {app ? (
@@ -170,6 +170,23 @@ export default async function SubscribersPage({
                           <Play className="w-4 h-4" />
                           <span className="text-sm">Android</span>
                         </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {activeSubscription?.environment ? (
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            activeSubscription.environment === "Sandbox" || activeSubscription.environment === "sandbox"
+                              ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
+                              : "bg-emerald-500/10 text-emerald-500"
+                          }`}
+                        >
+                          {activeSubscription.environment === "Sandbox" || activeSubscription.environment === "sandbox" 
+                            ? "🧪 Sandbox" 
+                            : "🚀 Production"}
+                        </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
                       )}

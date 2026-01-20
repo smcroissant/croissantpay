@@ -2,7 +2,6 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { getUserOrganizations } from "@/lib/services/organizations";
 import {
   getDashboardStats,
   getRevenueChart,
@@ -16,10 +15,10 @@ import { getWebhookStats, getRecentWebhookEvents } from "@/lib/services/webhooks
 import { getPromoCodesByApp } from "@/lib/services/promo-codes";
 import { getExperimentsByApp } from "@/lib/services/experiments";
 import { db } from "@/lib/db";
-import { app, subscriber, product } from "@/lib/db/schema";
+import { app, subscriber, product, organization, organizationMember } from "@/lib/db/schema";
 import { eq, desc, inArray, sql } from "drizzle-orm";
 
-// Get current user's organization ID
+// Get current user's organization ID (using database query)
 async function getCurrentOrganizationId(): Promise<string | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -27,8 +26,31 @@ async function getCurrentOrganizationId(): Promise<string | null> {
 
   if (!session) return null;
 
-  const organizations = await getUserOrganizations(session.user.id);
-  return organizations[0]?.id || null;
+  // Query user's organizations from database
+  const [membership] = await db
+    .select({ organizationId: organizationMember.organizationId })
+    .from(organizationMember)
+    .where(eq(organizationMember.userId, session.user.id))
+    .limit(1);
+
+  return membership?.organizationId || null;
+}
+
+// Get organization by ID
+export async function fetchOrganization(orgId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) return null;
+
+  const [org] = await db
+    .select()
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1);
+
+  return org;
 }
 
 // Dashboard overview
@@ -210,6 +232,7 @@ export async function fetchWebhookEvents(limit: number = 50) {
     eventType: string;
     source: string;
     status: string;
+    environment: string | null;
     createdAt: Date;
   }> = [];
 
@@ -231,6 +254,7 @@ export async function fetchWebhookEvents(limit: number = 50) {
         eventType: event.eventType,
         source: event.platform, // platform is 'ios' or 'android'
         status,
+        environment: event.environment,
         createdAt: event.createdAt,
       });
     }

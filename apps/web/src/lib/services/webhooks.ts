@@ -30,6 +30,7 @@ export interface WebhookEventRecord {
   platform: "ios" | "android";
   eventType: string;
   eventId: string | null;
+  environment: string | null; // Sandbox, Production, or Test
   payload: Record<string, unknown>;
   processedAt: Date | null;
   error: string | null;
@@ -43,7 +44,8 @@ export async function recordWebhookEvent(
   platform: "ios" | "android",
   eventType: string,
   payload: Record<string, unknown>,
-  eventId?: string
+  eventId?: string,
+  environment?: string
 ): Promise<string> {
   const [event] = await db
     .insert(webhookEvent)
@@ -52,6 +54,7 @@ export async function recordWebhookEvent(
       platform,
       eventType,
       eventId,
+      environment: environment || "production",
       payload,
     })
     .returning({ id: webhookEvent.id });

@@ -59,8 +59,10 @@ export async function POST(
       );
     }
 
-    // Determine event type
+    // Determine event type and environment
     let eventType = "UNKNOWN";
+    let environment = "Production"; // Default to production for Google
+    
     if (payload.subscriptionNotification) {
       eventType = `SUBSCRIPTION_${payload.subscriptionNotification.notificationType}`;
     } else if (payload.oneTimeProductNotification) {
@@ -69,9 +71,10 @@ export async function POST(
       eventType = "VOIDED_PURCHASE";
     } else if (payload.testNotification) {
       eventType = "TEST";
+      environment = "Test"; // Test notification
     }
 
-    // Log the webhook event
+    // Log the webhook event with environment
     const [webhookRecord] = await db
       .insert(webhookEvent)
       .values({
@@ -79,6 +82,7 @@ export async function POST(
         platform: "android",
         eventType,
         eventId: message.messageId,
+        environment,
         payload: payload as unknown as Record<string, unknown>,
       })
       .returning();

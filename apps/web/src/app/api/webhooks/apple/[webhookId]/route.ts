@@ -83,12 +83,13 @@ export async function POST(
       );
     }
 
-    // Log the webhook event
+    // Log the webhook event with environment
     await db.insert(webhookEvent).values({
       appId: appConfig.id,
       platform: "ios",
       eventType: subtype ? `${notificationType}.${subtype}` : notificationType,
       eventId: notificationUUID,
+      environment: data.environment, // Sandbox or Production
       payload: payload as unknown as Record<string, unknown>,
     });
 

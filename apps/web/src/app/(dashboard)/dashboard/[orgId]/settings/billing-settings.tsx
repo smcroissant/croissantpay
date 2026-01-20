@@ -3,21 +3,15 @@
 import { useState } from "react";
 import { CreditCard, Check, Loader2, ExternalLink, Crown, Zap, Building2, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { authClient } from "@/lib/auth-client";
 
 export function BillingSettings({ orgId }: { orgId: string }) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   const { data: billing, isLoading } = trpc.organizations.getBilling.useQuery();
   const { data: usageData } = trpc.organizations.getUsage.useQuery();
-
-  const createCheckout = trpc.organizations.createCheckout.useMutation({
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-  });
 
   const createPortal = trpc.organizations.createPortalSession.useMutation({
     onSuccess: (data) => {
@@ -26,6 +20,31 @@ export function BillingSettings({ orgId }: { orgId: string }) {
       }
     },
   });
+
+  // Use Better Auth's subscription.upgrade for checkouts
+  const handleUpgradePlan = async (planId: string) => {
+    if (planId === "enterprise") {
+      window.open("mailto:sales@croissantpay.dev?subject=Enterprise%20Plan%20Inquiry", "_blank");
+      return;
+    }
+
+    setIsUpgrading(true);
+    try {
+      // Use Better Auth client to create checkout session
+      await authClient.subscription.upgrade({
+        plan: planId,
+        referenceId: orgId,
+        customerType: "organization",
+        annual: billingCycle === "yearly",
+        successUrl: `${window.location.origin}/dashboard/${orgId}/settings?billing=success`,
+        cancelUrl: `${window.location.origin}/dashboard/${orgId}/settings?billing=canceled`,
+      });
+    } catch (error) {
+      console.error("Failed to create checkout session:", error);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -78,13 +97,8 @@ export function BillingSettings({ orgId }: { orgId: string }) {
     return value.toString();
   };
 
-  const handleUpgrade = (planId: string) => {
-    if (planId === "enterprise") {
-      window.open("mailto:sales@croissantpay.dev?subject=Enterprise%20Plan%20Inquiry", "_blank");
-      return;
-    }
-    createCheckout.mutate({ planId, billingCycle });
-  };
+  // handleUpgrade now uses Better Auth's subscription.upgrade
+  const handleUpgrade = (planId: string) => handleUpgradePlan(planId);
 
   const getPlanIcon = (planId: string) => {
     switch (planId) {
@@ -337,14 +351,14 @@ export function BillingSettings({ orgId }: { orgId: string }) {
                 ) : (
                   <button
                     onClick={() => handleUpgrade(plan.id)}
-                    disabled={createCheckout.isPending}
+                    disabled={isUpgrading}
                     className={`w-full px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                       isDowngrade
                         ? "bg-secondary hover:bg-secondary/80"
                         : "bg-primary text-primary-foreground hover:bg-primary/90"
                     } disabled:opacity-50`}
                   >
-                    {createCheckout.isPending ? (
+                    {isUpgrading ? (
                       <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                     ) : isDowngrade ? (
                       "Downgrade"

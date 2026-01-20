@@ -55,18 +55,24 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-});
+export const session = pgTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Better Auth organization plugin fields
+    activeOrganizationId: text("active_organization_id"),
+  },
+  (table) => [index("session_user_idx").on(table.userId)]
+);
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -103,6 +109,8 @@ export const organization = pgTable("organization", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  onboardingStep: integer("onboarding_step").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -125,21 +133,29 @@ export const organizationMember = pgTable(
   ]
 );
 
-export const organizationInvitation = pgTable("organization_invitation", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: text("role").notNull().default("member"), // admin, member
-  token: text("token").notNull().unique(),
-  invitedBy: text("invited_by")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  expiresAt: timestamp("expires_at").notNull(),
-  acceptedAt: timestamp("accepted_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const organizationInvitation = pgTable(
+  "organization_invitation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull().default("member"), // admin, member
+    status: text("status").notNull().default("pending"), // pending, accepted, rejected, expired
+    token: text("token").notNull().unique(),
+    invitedBy: text("invited_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    acceptedAt: timestamp("accepted_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("invitation_org_idx").on(table.organizationId),
+    index("invitation_email_idx").on(table.email),
+  ]
+);
 
 // ============================================================================
 // APPS
@@ -533,6 +549,8 @@ export const webhookEvent = pgTable(
     platform: platformEnum("platform").notNull(),
     eventType: text("event_type").notNull(),
     eventId: text("event_id"), // Store's event ID
+    // Environment (sandbox, production, test)
+    environment: text("environment").default("production"), // Sandbox, Production, or Test
     // Payload
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
     // Processing

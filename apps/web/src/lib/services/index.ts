@@ -1,7 +1,6 @@
 // Service exports
 export * from "./apps";
 export * from "./entitlements";
-export * from "./organizations";
 export * from "./products";
 export * from "./receipts";
 export * from "./subscribers";
@@ -14,9 +13,6 @@ export * from "./stripe";
 // Webhook services
 export * from "./webhooks";
 export * from "./customer-webhooks";
-
-// Subscription management
-export * from "./subscription-lifecycle";
 
 // Analytics
 export * from "./analytics";

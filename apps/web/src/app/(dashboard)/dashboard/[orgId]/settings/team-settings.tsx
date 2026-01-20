@@ -31,13 +31,10 @@ export function TeamSettings({ orgId }: { orgId: string }) {
     trpc.organizations.listInvitations.useQuery();
 
   const inviteMember = trpc.organizations.inviteMember.useMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       utils.organizations.listInvitations.invalidate();
       setInviteEmail("");
-      // Show the invite URL
-      if (data.inviteUrl) {
-        setCopiedUrl(data.inviteUrl);
-      }
+      setShowInviteModal(false);
     },
   });
 
@@ -166,7 +163,7 @@ export function TeamSettings({ orgId }: { orgId: string }) {
                       value={member.role}
                       onChange={(e) =>
                         updateRole.mutate({
-                          userId: member.id,
+                          memberId: member.memberId,
                           role: e.target.value as "admin" | "member",
                         })
                       }
@@ -179,7 +176,7 @@ export function TeamSettings({ orgId }: { orgId: string }) {
                     <button
                       onClick={() => {
                         if (confirm("Are you sure you want to remove this member?")) {
-                          removeMember.mutate({ userId: member.id });
+                          removeMember.mutate({ memberId: member.memberId });
                         }
                       }}
                       disabled={removeMember.isPending}
@@ -223,7 +220,7 @@ export function TeamSettings({ orgId }: { orgId: string }) {
                   <div>
                     <p className="font-medium">{invitation.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      Invited by {invitation.invitedBy}
+                      Invited as {invitation.role}
                     </p>
                   </div>
                 </div>

@@ -1,12 +1,15 @@
 import { headers } from "next/headers";
 import Link from "next/link";
-import { User, Key, ArrowRight } from "lucide-react";
+import { User, Key, ArrowRight, BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { organization, organizationMember } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { BillingSettings } from "./billing-settings";
 import { TeamSettings } from "./team-settings";
 import { OrgDangerZone } from "./org-danger-zone";
-import { getOrganization, getUserOrganizations } from "@/lib/services/organizations";
 import { OrganizationSettings } from "./organization-settings";
+import { RestartOnboardingButton } from "./restart-onboarding-button";
 
 export default async function SettingsPage({
   params,
@@ -19,11 +22,28 @@ export default async function SettingsPage({
     headers: await headers(),
   });
 
-  // Get organization details and user role
-  const org = await getOrganization(orgId);
-  const userOrgs = session ? await getUserOrganizations(session.user.id) : [];
-  const userOrg = userOrgs.find((o) => o.id === orgId);
-  const isOwner = userOrg?.role === "owner";
+  // Get organization details
+  const [org] = await db
+    .select()
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1);
+
+  // Get user role in this organization
+  let isOwner = false;
+  if (session) {
+    const [membership] = await db
+      .select()
+      .from(organizationMember)
+      .where(
+        and(
+          eq(organizationMember.organizationId, orgId),
+          eq(organizationMember.userId, session.user.id)
+        )
+      )
+      .limit(1);
+    isOwner = membership?.role === "owner";
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -53,6 +73,34 @@ export default async function SettingsPage({
 
       {/* Billing */}
       <BillingSettings orgId={orgId} />
+
+      {/* Setup Guide */}
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Setup Guide</h2>
+              <p className="text-sm text-muted-foreground">
+                Step-by-step guide to configure your app
+              </p>
+            </div>
+          </div>
+          <RestartOnboardingButton orgId={orgId} />
+        </div>
+
+        <Link
+          href={`/dashboard/${orgId}/onboarding`}
+          className="block p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 hover:border-primary/40 transition-colors"
+        >
+          <h3 className="font-medium mb-1">View Setup Guide</h3>
+          <p className="text-sm text-muted-foreground">
+            Review the setup steps for Apple, Google, products, webhooks, and SDK integration
+          </p>
+        </Link>
+      </div>
 
       {/* API Documentation */}
       <div className="bg-card border border-border rounded-2xl p-6">

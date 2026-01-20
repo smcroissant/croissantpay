@@ -11,11 +11,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   fetchDashboardStats,
   fetchRecentActivity,
   fetchApps,
   fetchUsageData,
+  fetchOrganization,
 } from "@/app/actions/dashboard";
 import { isCloudMode } from "@/lib/config";
 
@@ -25,6 +27,12 @@ export default async function OrgDashboardPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  
+  // Check if onboarding is completed
+  const org = await fetchOrganization(orgId);
+  if (org && !org.onboardingCompleted) {
+    redirect(`/dashboard/${orgId}/onboarding`);
+  }
   
   const [stats, recentActivity, apps, usageData] = await Promise.all([
     fetchDashboardStats(),

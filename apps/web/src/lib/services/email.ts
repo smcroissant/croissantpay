@@ -203,6 +203,7 @@ The CroissantPay Team
   },
 };
 
+// Send email using a template
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
   if (!resend) {
     console.log("Email service not configured. Would send:", emailData);
@@ -221,6 +222,40 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
       to: emailData.to,
       subject: template.subject,
       text: template.text(emailData.data),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Failed to send email:", error);
+    return false;
+  }
+}
+
+// Send raw email with custom content (for Better Auth integration)
+interface RawEmailData {
+  to: string;
+  subject: string;
+  html?: string;
+  text?: string;
+}
+
+export async function sendRawEmail(emailData: RawEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log("Email service not configured. Would send:", emailData);
+    return false;
+  }
+
+  try {
+    // Resend requires either html or text
+    const emailContent = emailData.html 
+      ? { html: emailData.html }
+      : { text: emailData.text || "" };
+
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || "CroissantPay <noreply@croissantpay.dev>",
+      to: emailData.to,
+      subject: emailData.subject,
+      ...emailContent,
     });
 
     return true;

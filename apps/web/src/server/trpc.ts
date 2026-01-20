@@ -3,18 +3,20 @@ import { headers, cookies } from "next/headers";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
-import { getUserOrganizations, createOrganization } from "@/lib/services/organizations";
 import { db } from "@/lib/db";
-import { app } from "@/lib/db/schema";
+import { app, organization, organizationMember } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 /**
  * Context for tRPC procedures
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  // Get request headers
+  const requestHeaders = await headers();
+  
   // Get session from Better Auth
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   // Get selected organization from cookies
@@ -25,6 +27,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     session,
     db,
     selectedOrgId,
+    headers: requestHeaders,
   };
 };
 
@@ -67,20 +70,51 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  // Get or create organization for user
-  let organizations = await getUserOrganizations(ctx.session.user.id);
+  // Get user's organizations using database query
+  const memberships = await db
+    .select({
+      organization,
+      role: organizationMember.role,
+    })
+    .from(organizationMember)
+    .innerJoin(organization, eq(organizationMember.organizationId, organization.id))
+    .where(eq(organizationMember.userId, ctx.session.user.id));
+
+  let organizations = memberships.map((m) => ({
+    ...m.organization,
+    role: m.role,
+  }));
 
   if (organizations.length === 0) {
     // Auto-create a default organization for the user
     const userSlug =
       ctx.session.user.email?.split("@")[0] ||
       `user-${ctx.session.user.id.slice(0, 8)}`;
-    const newOrg = await createOrganization({
-      name: `${ctx.session.user.name || userSlug}'s Organization`,
-      slug: userSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-      ownerId: ctx.session.user.id,
+    
+    const orgId = crypto.randomUUID();
+    const now = new Date();
+    
+    // Insert organization
+    const [newOrg] = await db
+      .insert(organization)
+      .values({
+        id: orgId,
+        name: `${ctx.session.user.name || userSlug}'s Organization`,
+        slug: userSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    // Add user as owner
+    await db.insert(organizationMember).values({
+      organizationId: orgId,
+      userId: ctx.session.user.id,
+      role: "owner",
+      createdAt: now,
     });
-    organizations = [{ ...newOrg, role: "owner" }];
+
+    organizations = [{ ...newOrg, role: "owner" as const }];
   }
 
   // Use selected organization from cookie, or default to first one
@@ -98,6 +132,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
       user: ctx.session.user,
       organizationId: selectedOrg.id,
       organization: selectedOrg,
+      headers: ctx.headers,
     },
   });
 });

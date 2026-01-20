@@ -347,6 +347,9 @@ export default async function WebhooksPage({
                   Source
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                  Environment
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                   Status
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
@@ -365,9 +368,6 @@ export default async function WebhooksPage({
                 >
                   <td className="px-6 py-4">
                     <span className="font-medium">{event.eventType}</span>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {event.id.substring(0, 8)}...
-                    </p>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -380,6 +380,19 @@ export default async function WebhooksPage({
                       }`}
                     >
                       {event.source === "ios" ? "Apple" : event.source === "android" ? "Google" : event.source}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        event.environment === "Sandbox"
+                          ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
+                          : event.environment === "Test"
+                          ? "bg-purple-500/10 text-purple-500 border border-purple-500/20"
+                          : "bg-emerald-500/10 text-emerald-500"
+                      }`}
+                    >
+                      {event.environment === "Sandbox" ? "🧪 Sandbox" : event.environment === "Test" ? "🔬 Test" : "🚀 Production"}
                     </span>
                   </td>
                   <td className="px-6 py-4">

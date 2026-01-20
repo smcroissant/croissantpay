@@ -9,7 +9,6 @@ import {
   organization,
   organizationMember,
 } from "@/lib/db/schema";
-import { getUserOrganizations } from "@/lib/services/organizations";
 
 export const usersRouter = createTRPCRouter({
   // Get current user
@@ -38,8 +37,20 @@ export const usersRouter = createTRPCRouter({
         });
       }
 
-      // Check if user owns any organizations
-      const userOrgs = await getUserOrganizations(ctx.user.id);
+      // Check if user owns any organizations (using database query)
+      const memberships = await db
+        .select({
+          organization,
+          role: organizationMember.role,
+        })
+        .from(organizationMember)
+        .innerJoin(organization, eq(organizationMember.organizationId, organization.id))
+        .where(eq(organizationMember.userId, ctx.user.id));
+
+      const userOrgs = memberships.map((m) => ({
+        ...m.organization,
+        role: m.role,
+      }));
       const ownedOrgs = userOrgs.filter((org) => org.role === "owner");
 
       // For owned organizations with other members, require transfer first
