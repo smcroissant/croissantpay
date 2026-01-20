@@ -40,12 +40,52 @@ export interface CreateOfferingInput {
 
 // Products
 export async function createProduct(
-  input: CreateProductInput
+  input: CreateProductInput & { skipEntitlement?: boolean }
 ): Promise<typeof product.$inferSelect> {
   const [newProduct] = await db
     .insert(product)
     .values(input)
     .returning();
+
+  // Auto-create an entitlement with the same name and link it
+  if (!input.skipEntitlement) {
+    // Check if entitlement with same identifier already exists
+    const [existingEntitlement] = await db
+      .select()
+      .from(entitlement)
+      .where(
+        and(
+          eq(entitlement.appId, input.appId),
+          eq(entitlement.identifier, input.identifier)
+        )
+      )
+      .limit(1);
+
+    let entitlementId: string;
+
+    if (existingEntitlement) {
+      // Use existing entitlement
+      entitlementId = existingEntitlement.id;
+    } else {
+      // Create new entitlement
+      const [newEntitlement] = await db
+        .insert(entitlement)
+        .values({
+          appId: input.appId,
+          identifier: input.identifier,
+          displayName: input.displayName,
+          description: input.description || `Access granted by ${input.displayName}`,
+        })
+        .returning();
+      entitlementId = newEntitlement.id;
+    }
+
+    // Link product to entitlement
+    await db.insert(productEntitlement).values({
+      productId: newProduct.id,
+      entitlementId,
+    });
+  }
 
   return newProduct;
 }
@@ -350,7 +390,7 @@ export async function bulkImportProducts(
         }
       } else {
         // Create new product
-        await db.insert(product).values({
+        const [newProduct] = await db.insert(product).values({
           appId: p.appId,
           identifier: p.identifier,
           storeProductId: p.storeProductId,
@@ -361,7 +401,43 @@ export async function bulkImportProducts(
           subscriptionGroupId: p.subscriptionGroupId,
           trialDuration: p.trialDuration,
           subscriptionPeriod: p.subscriptionPeriod,
+        }).returning();
+
+        // Auto-create entitlement and link it
+        const [existingEntitlement] = await db
+          .select()
+          .from(entitlement)
+          .where(
+            and(
+              eq(entitlement.appId, p.appId),
+              eq(entitlement.identifier, p.identifier)
+            )
+          )
+          .limit(1);
+
+        let entitlementId: string;
+
+        if (existingEntitlement) {
+          entitlementId = existingEntitlement.id;
+        } else {
+          const [newEntitlement] = await db
+            .insert(entitlement)
+            .values({
+              appId: p.appId,
+              identifier: p.identifier,
+              displayName: p.displayName,
+              description: p.description || `Access granted by ${p.displayName}`,
+            })
+            .returning();
+          entitlementId = newEntitlement.id;
+        }
+
+        // Link product to entitlement
+        await db.insert(productEntitlement).values({
+          productId: newProduct.id,
+          entitlementId,
         });
+
         result.created++;
       }
     } catch (error) {

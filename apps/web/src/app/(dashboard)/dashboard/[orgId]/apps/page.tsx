@@ -1,46 +1,34 @@
+"use client";
+
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Smartphone, Apple, Play, Key, Copy, Eye, Users, DollarSign } from "lucide-react";
-import { fetchApps } from "@/app/actions/dashboard";
-import { db } from "@/lib/db";
-import { subscriber, subscription } from "@/lib/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import {
+  Plus,
+  Smartphone,
+  Apple,
+  Play,
+  Key,
+  Copy,
+  Eye,
+  Users,
+  DollarSign,
+  Loader2,
+} from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
 
-export default async function AppsPage({
-  params,
-}: {
-  params: Promise<{ orgId: string }>;
-}) {
-  const { orgId } = await params;
-  const apps = await fetchApps();
+export default function AppsPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
 
-  // Get stats for each app
-  const appsWithStats = await Promise.all(
-    apps.map(async (app) => {
-      // Get subscriber count
-      const [subscriberCount] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(subscriber)
-        .where(eq(subscriber.appId, app.id));
+  const { data: apps, isLoading } = trpc.apps.list.useQuery();
 
-      // Get active subscription count for MRR estimate
-      const [activeSubCount] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(subscription)
-        .innerJoin(subscriber, eq(subscription.subscriberId, subscriber.id))
-        .where(
-          and(
-            eq(subscriber.appId, app.id),
-            eq(subscription.status, "active")
-          )
-        );
-
-      return {
-        ...app,
-        subscriberCount: Number(subscriberCount?.count || 0),
-        activeSubscriptions: Number(activeSubCount?.count || 0),
-      };
-    })
-  );
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -61,7 +49,7 @@ export default async function AppsPage({
         </Link>
       </div>
 
-      {appsWithStats.length === 0 ? (
+      {!apps || apps.length === 0 ? (
         /* Empty State */
         <div className="bg-card border border-border rounded-2xl p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -83,7 +71,7 @@ export default async function AppsPage({
       ) : (
         /* App Cards Grid */
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {appsWithStats.map((app) => (
+          {apps.map((app) => (
             <AppCard key={app.id} app={app} orgId={orgId} />
           ))}
         </div>
@@ -153,14 +141,18 @@ function AppCard({
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-muted-foreground" />
           <div>
-            <p className="text-lg font-bold">{app.subscriberCount.toLocaleString()}</p>
+            <p className="text-lg font-bold">
+              {app.subscriberCount.toLocaleString()}
+            </p>
             <p className="text-xs text-muted-foreground">Subscribers</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-muted-foreground" />
           <div>
-            <p className="text-lg font-bold">{app.activeSubscriptions.toLocaleString()}</p>
+            <p className="text-lg font-bold">
+              {app.activeSubscriptions.toLocaleString()}
+            </p>
             <p className="text-xs text-muted-foreground">Active Subs</p>
           </div>
         </div>
@@ -187,4 +179,3 @@ function AppCard({
     </div>
   );
 }
-

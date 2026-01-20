@@ -1,55 +1,27 @@
+"use client";
+
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Users, Search, Filter, Download, Apple, Play } from "lucide-react";
-import { db } from "@/lib/db";
-import { subscriber, subscription, app } from "@/lib/db/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { Users, Search, Filter, Download, Apple, Play, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
 
-export default async function SubscribersPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ orgId: string }>;
-  searchParams: Promise<{ appId?: string }>;
-}) {
-  const { orgId } = await params;
-  const { appId } = await searchParams;
+export default function SubscribersPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const orgId = params.orgId as string;
+  const appId = searchParams.get("appId") || undefined;
 
-  // Build query
-  const query = db
-    .select({
-      subscriber,
-      subscription,
-      app,
-    })
-    .from(subscriber)
-    .leftJoin(subscription, eq(subscription.subscriberId, subscriber.id))
-    .leftJoin(app, eq(subscriber.appId, app.id))
-    .orderBy(desc(subscriber.createdAt))
-    .limit(50);
+  const { data: subscribers, isLoading } = trpc.subscribers.list.useQuery(
+    appId ? { appId } : undefined
+  );
 
-  const results = await query;
-
-  // Group by subscriber
-  const subscribersMap = new Map<string, {
-    subscriber: typeof subscriber.$inferSelect;
-    subscriptions: Array<typeof subscription.$inferSelect>;
-    app: typeof app.$inferSelect | null;
-  }>();
-
-  for (const row of results) {
-    if (!subscribersMap.has(row.subscriber.id)) {
-      subscribersMap.set(row.subscriber.id, {
-        subscriber: row.subscriber,
-        subscriptions: [],
-        app: row.app,
-      });
-    }
-    if (row.subscription) {
-      subscribersMap.get(row.subscriber.id)!.subscriptions.push(row.subscription);
-    }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
-
-  const subscribers = Array.from(subscribersMap.values());
 
   return (
     <div className="space-y-6">
@@ -84,7 +56,7 @@ export default async function SubscribersPage({
       </div>
 
       {/* Subscribers Table */}
-      {subscribers.length === 0 ? (
+      {!subscribers || subscribers.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-primary" />
@@ -204,4 +176,3 @@ export default async function SubscribersPage({
     </div>
   );
 }
-

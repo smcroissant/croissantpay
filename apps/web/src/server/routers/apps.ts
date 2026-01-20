@@ -212,5 +212,23 @@ export const appsRouter = createTRPCRouter({
       const result = await regenerateWebhookIds(input.appId, input.platform);
       return result;
     }),
+
+  // Get integration test status
+  getIntegrationTestStatus: protectedProcedure
+    .input(z.object({ appId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const app = await getApp(input.appId);
+
+      if (!app || app.organizationId !== ctx.organizationId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
+      }
+
+      return {
+        lastIntegrationTest: app.lastIntegrationTest?.toISOString() || null,
+        lastIntegrationTestPlatform: app.lastIntegrationTestPlatform || null,
+        lastIntegrationTestVersion: app.lastIntegrationTestVersion || null,
+        hasBeenTested: !!app.lastIntegrationTest,
+      };
+    }),
 });
 

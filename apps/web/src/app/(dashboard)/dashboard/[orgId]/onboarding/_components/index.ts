@@ -1,0 +1,12 @@
+export { GooglePlayIcon } from "@/components/app-setup";
+export { WelcomeStep } from "./welcome-step";
+export { CreateAppStep } from "./create-app-step";
+export { AppleSetupStep } from "./apple-setup-step";
+export { GoogleSetupStep } from "./google-setup-step";
+export { CreateProductsStep } from "./create-products-step";
+export { CreateOfferingsStep } from "./create-offerings-step";
+export { WebhooksStep } from "./webhooks-step";
+export { VerifySetupStep } from "./verify-setup-step";
+export { IntegrateSDKStep } from "./integrate-sdk-step";
+export type { OnboardingStep } from "./types";
+export * from "./schemas";

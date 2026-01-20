@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   TrendingUp,
   TrendingDown,
@@ -9,37 +13,47 @@ import {
   Smartphone,
   Package,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import {
-  fetchDashboardStats,
-  fetchRecentActivity,
-  fetchApps,
-  fetchUsageData,
-  fetchOrganization,
-} from "@/app/actions/dashboard";
-import { isCloudMode } from "@/lib/config";
+import { trpc } from "@/lib/trpc/client";
 
-export default async function OrgDashboardPage({
-  params,
-}: {
-  params: Promise<{ orgId: string }>;
-}) {
-  const { orgId } = await params;
-  
-  // Check if onboarding is completed
-  const org = await fetchOrganization(orgId);
-  if (org && !org.onboardingCompleted) {
-    redirect(`/dashboard/${orgId}/onboarding`);
+export default function OrgDashboardPage() {
+  const params = useParams();
+  const router = useRouter();
+  const orgId = params.orgId as string;
+
+  // Fetch all data with tRPC
+  const { data: apps, isLoading: loadingApps } = trpc.apps.list.useQuery();
+  const { data: stats, isLoading: loadingStats } = trpc.analytics.stats.useQuery();
+  const { data: recentActivity, isLoading: loadingActivity } = trpc.analytics.recentActivity.useQuery({ limit: 5 });
+  const { data: usageData } = trpc.organizations.getUsage.useQuery();
+
+  // Redirect to apps/new if no apps exist
+  useEffect(() => {
+    if (!loadingApps && apps && apps.length === 0) {
+      router.push(`/dashboard/${orgId}/apps/new`);
+    }
+  }, [apps, loadingApps, orgId, router]);
+
+  const isLoading = loadingApps || loadingStats || loadingActivity;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
-  
-  const [stats, recentActivity, apps, usageData] = await Promise.all([
-    fetchDashboardStats(),
-    fetchRecentActivity(5),
-    fetchApps(),
-    fetchUsageData(),
-  ]);
+
+  // If redirecting to apps/new, show loading
+  if (apps && apps.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const hasApps = apps && apps.length > 0;
 
@@ -48,25 +62,38 @@ export default async function OrgDashboardPage({
       {/* Usage Warnings */}
       {usageData?.warnings && usageData.warnings.length > 0 && (
         <div className="space-y-2">
-          {usageData.warnings.map((warning, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 p-4 rounded-xl border ${
-                warning.severity === "critical"
-                  ? "bg-red-500/10 border-red-500/30 text-red-400"
-                  : "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-              }`}
-            >
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <p className="flex-1 text-sm">{warning.message}</p>
-              <Link
-                href="/pricing"
-                className="text-sm font-medium hover:underline"
+          {usageData.warnings.map((warning, i) => {
+            const metricLabels: Record<string, string> = {
+              apps: "Apps",
+              subscribers: "Subscribers",
+              apiRequests: "API Requests",
+              teamMembers: "Team Members",
+            };
+            const message =
+              warning.severity === "critical"
+                ? `You've reached your ${metricLabels[warning.metric] || warning.metric} limit.`
+                : `You're at ${warning.percentage}% of your ${metricLabels[warning.metric] || warning.metric} limit.`;
+
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-4 rounded-xl border ${
+                  warning.severity === "critical"
+                    ? "bg-red-500/10 border-red-500/30 text-red-400"
+                    : "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                }`}
               >
-                Upgrade
-              </Link>
-            </div>
-          ))}
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="flex-1 text-sm">{message}</p>
+                <Link
+                  href="/pricing"
+                  className="text-sm font-medium hover:underline"
+                >
+                  Upgrade
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -76,14 +103,26 @@ export default async function OrgDashboardPage({
           title="Monthly Revenue"
           value={formatCurrency(stats?.mrr || 0)}
           change={`${stats?.revenueGrowth && stats.revenueGrowth >= 0 ? "+" : ""}${stats?.revenueGrowth || 0}%`}
-          trend={stats?.revenueGrowth && stats.revenueGrowth > 0 ? "up" : stats?.revenueGrowth && stats.revenueGrowth < 0 ? "down" : "neutral"}
+          trend={
+            stats?.revenueGrowth && stats.revenueGrowth > 0
+              ? "up"
+              : stats?.revenueGrowth && stats.revenueGrowth < 0
+              ? "down"
+              : "neutral"
+          }
           icon={DollarSign}
         />
         <StatCard
           title="Active Subscribers"
           value={formatNumber(stats?.activeSubscriptions || 0)}
           change={`${stats?.subscribersGrowth && stats.subscribersGrowth >= 0 ? "+" : ""}${stats?.subscribersGrowth || 0}%`}
-          trend={stats?.subscribersGrowth && stats.subscribersGrowth > 0 ? "up" : stats?.subscribersGrowth && stats.subscribersGrowth < 0 ? "down" : "neutral"}
+          trend={
+            stats?.subscribersGrowth && stats.subscribersGrowth > 0
+              ? "up"
+              : stats?.subscribersGrowth && stats.subscribersGrowth < 0
+              ? "down"
+              : "neutral"
+          }
           icon={Users}
         />
         <StatCard
@@ -109,9 +148,12 @@ export default async function OrgDashboardPage({
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Smartphone className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">Welcome to CroissantPay!</h2>
+            <h2 className="text-xl font-semibold mb-2">
+              Welcome to CroissantPay!
+            </h2>
             <p className="text-muted-foreground mb-6">
-              Get started by creating your first app and connecting it to the App Store or Play Store.
+              Get started by creating your first app and connecting it to the
+              App Store or Play Store.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -146,7 +188,7 @@ export default async function OrgDashboardPage({
                 View All
               </Link>
             </div>
-            {recentActivity.length > 0 ? (
+            {recentActivity && recentActivity.length > 0 ? (
               <div className="space-y-3">
                 {recentActivity.map((activity) => (
                   <div
@@ -165,7 +207,9 @@ export default async function OrgDashboardPage({
                       <CreditCard className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{activity.description}</p>
+                      <p className="font-medium truncate">
+                        {activity.description}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(activity.createdAt).toLocaleString()}
                       </p>
@@ -173,7 +217,9 @@ export default async function OrgDashboardPage({
                     {activity.amount && (
                       <span
                         className={`font-semibold ${
-                          activity.type === "refund" ? "text-red-400" : "text-green-400"
+                          activity.type === "refund"
+                            ? "text-red-400"
+                            : "text-green-400"
                         }`}
                       >
                         {activity.type === "refund" ? "-" : "+"}
@@ -187,7 +233,9 @@ export default async function OrgDashboardPage({
               <div className="text-center py-12 text-muted-foreground">
                 <Activity className="w-10 h-10 mx-auto mb-2 opacity-50" />
                 <p>No activity yet</p>
-                <p className="text-sm">Transactions will appear here as they happen</p>
+                <p className="text-sm">
+                  Transactions will appear here as they happen
+                </p>
               </div>
             )}
           </div>
@@ -206,7 +254,7 @@ export default async function OrgDashboardPage({
                 </Link>
               </div>
               <div className="space-y-3">
-                {apps.slice(0, 3).map((app) => (
+                {apps?.slice(0, 3).map((app) => (
                   <Link
                     key={app.id}
                     href={`/dashboard/${orgId}/apps/${app.id}`}
@@ -224,19 +272,21 @@ export default async function OrgDashboardPage({
                   </Link>
                 ))}
               </div>
-              {apps.length === 0 && (
+              {apps?.length === 0 && (
                 <Link
                   href={`/dashboard/${orgId}/apps/new`}
                   className="block text-center p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors"
                 >
                   <Package className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Add your first app</p>
+                  <p className="text-sm text-muted-foreground">
+                    Add your first app
+                  </p>
                 </Link>
               )}
             </div>
 
-            {/* Usage Stats (Cloud only) */}
-            {isCloudMode() && usageData && (
+            {/* Usage Stats */}
+            {usageData && (
               <div className="bg-card border border-border rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Usage</h2>
@@ -251,17 +301,17 @@ export default async function OrgDashboardPage({
                   <UsageBar
                     label="Subscribers"
                     current={usageData.usage.subscribers}
-                    limit={100}
+                    limit={usageData.limits.maxSubscribers}
                   />
                   <UsageBar
                     label="API Requests"
                     current={usageData.usage.apiRequests}
-                    limit={10000}
+                    limit={usageData.limits.maxApiRequests}
                   />
                   <UsageBar
                     label="Apps"
                     current={usageData.usage.apps}
-                    limit={1}
+                    limit={usageData.limits.maxApps}
                   />
                 </div>
               </div>
@@ -328,16 +378,17 @@ function UsageBar({
   current: number;
   limit: number;
 }) {
-  const percentage = limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
-  const isWarning = percentage >= 80;
-  const isCritical = percentage >= 100;
+  const isUnlimited = limit === -1;
+  const percentage = isUnlimited ? 0 : limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
+  const isWarning = !isUnlimited && percentage >= 80;
+  const isCritical = !isUnlimited && percentage >= 100;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <span className="text-sm">{label}</span>
         <span className="text-xs text-muted-foreground">
-          {formatNumber(current)} / {formatNumber(limit)}
+          {formatNumber(current)} / {isUnlimited ? "∞" : formatNumber(limit)}
         </span>
       </div>
       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -349,7 +400,7 @@ function UsageBar({
               ? "bg-yellow-500"
               : "bg-primary"
           }`}
-          style={{ width: `${percentage}%` }}
+          style={{ width: isUnlimited ? "0%" : `${percentage}%` }}
         />
       </div>
     </div>
@@ -370,4 +421,3 @@ function formatNumber(num: number): string {
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
 }
-

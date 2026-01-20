@@ -1,14 +1,32 @@
-import Link from "next/link";
-import { FlaskConical, Plus, Users, TrendingUp, Pause, Play, CheckCircle } from "lucide-react";
-import { fetchExperiments } from "@/app/actions/dashboard";
+"use client";
 
-export default async function ExperimentsPage({
-  params,
-}: {
-  params: Promise<{ orgId: string }>;
-}) {
-  const { orgId } = await params;
-  const experiments = await fetchExperiments();
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import {
+  FlaskConical,
+  Plus,
+  Users,
+  TrendingUp,
+  Pause,
+  Play,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+
+export default function ExperimentsPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
+
+  const { data: experiments, isLoading } = trpc.experiments.list.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -37,7 +55,8 @@ export default async function ExperimentsPage({
           </div>
           <h2 className="text-xl font-semibold mb-2">No experiments yet</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Create A/B tests to experiment with different offerings, pricing, and paywalls.
+            Create A/B tests to experiment with different offerings, pricing, and
+            paywalls.
           </p>
           <Link
             href={`/dashboard/${orgId}/experiments/new`}
@@ -77,28 +96,6 @@ export default async function ExperimentsPage({
                   <span>{experiment.conversionRate || 0}% conversion</span>
                 </div>
               </div>
-
-              {/* Variants Preview */}
-              {experiment.variants && experiment.variants.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-2">Variants</p>
-                  <div className="flex gap-2">
-                    {experiment.variants.slice(0, 3).map((variant, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 rounded-full bg-secondary text-xs"
-                      >
-                        {variant.name}
-                      </span>
-                    ))}
-                    {experiment.variants.length > 3 && (
-                      <span className="px-2 py-1 rounded-full bg-secondary text-xs">
-                        +{experiment.variants.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </Link>
           ))}
         </div>
@@ -138,4 +135,3 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
-

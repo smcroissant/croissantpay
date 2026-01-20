@@ -1,3 +1,6 @@
+"use client";
+
+import { useParams } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,22 +13,38 @@ import {
   Activity,
   Users,
   Package,
+  Loader2,
 } from "lucide-react";
-import { fetchAppDetails } from "@/app/actions/dashboard";
+import { trpc } from "@/lib/trpc/client";
 import { CopyButton } from "@/components/copy-button";
-import { RotateKeysButton, SendTestWebhookButton } from "@/components/app-actions";
+import {
+  RotateKeysButton,
+  SendTestWebhookButton,
+} from "@/components/app-actions";
 
-export default async function AppDetailsPage({
-  params,
-}: {
-  params: Promise<{ orgId: string; appId: string }>;
-}) {
-  const { orgId, appId } = await params;
-  const app = await fetchAppDetails(appId);
+export default function AppDetailsPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
+  const appId = params.appId as string;
 
-  if (!app) {
+  const { data: app, isLoading, error } = trpc.apps.get.useQuery({ appId });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !app) {
     notFound();
   }
+
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.BETTER_AUTH_URL || "https://your-domain.com";
 
   return (
     <div className="space-y-6">
@@ -138,8 +157,8 @@ export default async function AppDetailsPage({
             </div>
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                Events like subscription.created, purchase.completed, etc. will be
-                sent to this URL with HMAC-SHA256 signature verification.
+                Events like subscription.created, purchase.completed, etc. will
+                be sent to this URL with HMAC-SHA256 signature verification.
               </p>
               <Link
                 href={`/dashboard/${orgId}/apps/${appId}/edit?tab=webhook`}
@@ -182,7 +201,10 @@ export default async function AppDetailsPage({
           {app.appleKeyId ? (
             <div className="space-y-3">
               <ConfigRow label="Key ID" value={app.appleKeyId} />
-              <ConfigRow label="Issuer ID" value={maskString(app.appleIssuerId || "")} />
+              <ConfigRow
+                label="Issuer ID"
+                value={maskString(app.appleIssuerId || "")}
+              />
               <ConfigRow label="Team ID" value={app.appleTeamId || "-"} />
               <div className="flex items-center gap-2 mt-4">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -253,11 +275,11 @@ export default async function AppDetailsPage({
         <div className="space-y-3">
           <EndpointRow
             label="Apple App Store Server Notifications"
-            url={`${process.env.BETTER_AUTH_URL || "https://your-domain.com"}/api/webhooks/apple`}
+            url={`${baseUrl}/api/webhooks/apple`}
           />
           <EndpointRow
             label="Google Play Real-time Developer Notifications"
-            url={`${process.env.BETTER_AUTH_URL || "https://your-domain.com"}/api/webhooks/google`}
+            url={`${baseUrl}/api/webhooks/google`}
           />
         </div>
       </div>
@@ -298,9 +320,7 @@ function StatCard({
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      {content}
-    </div>
+    <div className="bg-card border border-border rounded-xl p-4">{content}</div>
   );
 }
 
@@ -367,4 +387,3 @@ function maskString(str: string): string {
   if (str.length <= 8) return str;
   return `${str.substring(0, 4)}...${str.substring(str.length - 4)}`;
 }
-

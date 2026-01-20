@@ -1,36 +1,55 @@
-import React from "react";
-import { Bell, CheckCircle, XCircle, Clock, RefreshCw, Filter, Apple, Settings, ExternalLink, Shield, AlertTriangle } from "lucide-react";
-import { fetchWebhookEvents, fetchApps } from "@/app/actions/dashboard";
-import { headers } from "next/headers";
-import { CopyButton } from "./copy-button";
+"use client";
+
+import { useParams } from "next/navigation";
+import {
+  Bell,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RefreshCw,
+  Filter,
+  Apple,
+  Settings,
+  ExternalLink,
+  Shield,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
+import { trpc } from "@/lib/trpc/client";
+import { CopyButton } from "./copy-button";
 import { WebhookActions } from "./webhook-actions";
 
 // Google Play icon component
 function GooglePlayIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/>
+      <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z" />
     </svg>
   );
 }
 
-export default async function WebhooksPage({
-  params,
-}: {
-  params: Promise<{ orgId: string }>;
-}) {
-  const { orgId } = await params;
-  const webhookEvents = await fetchWebhookEvents(50);
-  
-  // Get the base URL for webhook endpoints
-  const headersList = await headers();
-  const host = headersList.get("host") || "your-domain.com";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
+export default function WebhooksPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
 
-  // Fetch apps for this organization
-  const apps = await fetchApps();
+  const { data: webhookEvents, isLoading: loadingEvents } =
+    trpc.analytics.webhookEventsAll.useQuery({ limit: 50 });
+  const { data: apps, isLoading: loadingApps } = trpc.apps.list.useQuery();
+
+  // Get the base URL for webhook endpoints
+  const baseUrl =
+    typeof window !== "undefined" ? window.location.origin : "https://your-domain.com";
+
+  const isLoading = loadingEvents || loadingApps;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -53,17 +72,20 @@ export default async function WebhooksPage({
         <div className="flex items-start gap-3">
           <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-500 mb-1">Secure Webhook URLs</h3>
+            <h3 className="font-medium text-blue-500 mb-1">
+              Secure Webhook URLs
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Each app has a unique webhook ID for security. Use the app-specific URLs below to ensure 
-              notifications are routed correctly and to prevent unauthorized access.
+              Each app has a unique webhook ID for security. Use the app-specific
+              URLs below to ensure notifications are routed correctly and to
+              prevent unauthorized access.
             </p>
           </div>
         </div>
       </div>
 
       {/* App Webhook URLs */}
-      {apps.length === 0 ? (
+      {!apps || apps.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl p-8 text-center">
           <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Apps Configured</h3>
@@ -80,7 +102,10 @@ export default async function WebhooksPage({
       ) : (
         <div className="space-y-4">
           {apps.map((appData) => (
-            <div key={appData.id} className="bg-card border border-border rounded-2xl p-6">
+            <div
+              key={appData.id}
+              className="bg-card border border-border rounded-2xl p-6"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-semibold text-lg">{appData.name}</h3>
@@ -106,9 +131,13 @@ export default async function WebhooksPage({
                       <Apple className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <span className="font-medium text-sm">Apple App Store</span>
+                      <span className="font-medium text-sm">
+                        Apple App Store
+                      </span>
                       {!appData.appleWebhookId && (
-                        <span className="ml-2 text-xs text-yellow-500">(not configured)</span>
+                        <span className="ml-2 text-xs text-yellow-500">
+                          (not configured)
+                        </span>
                       )}
                     </div>
                   </div>
@@ -118,14 +147,20 @@ export default async function WebhooksPage({
                         <code className="flex-1 px-3 py-2 bg-background rounded-lg text-xs font-mono break-all">
                           {baseUrl}/api/webhooks/apple/{appData.appleWebhookId}
                         </code>
-                        <CopyButton text={`${baseUrl}/api/webhooks/apple/${appData.appleWebhookId}`} />
+                        <CopyButton
+                          text={`${baseUrl}/api/webhooks/apple/${appData.appleWebhookId}`}
+                        />
                       </div>
                       <WebhookActions appId={appData.id} platform="apple" />
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground">
-                      Webhook ID not generated. 
-                      <WebhookActions appId={appData.id} platform="apple" showGenerate />
+                      Webhook ID not generated.
+                      <WebhookActions
+                        appId={appData.id}
+                        platform="apple"
+                        showGenerate
+                      />
                     </div>
                   )}
                 </div>
@@ -139,7 +174,9 @@ export default async function WebhooksPage({
                     <div>
                       <span className="font-medium text-sm">Google Play</span>
                       {!appData.googleWebhookId && (
-                        <span className="ml-2 text-xs text-yellow-500">(not configured)</span>
+                        <span className="ml-2 text-xs text-yellow-500">
+                          (not configured)
+                        </span>
                       )}
                     </div>
                   </div>
@@ -149,14 +186,20 @@ export default async function WebhooksPage({
                         <code className="flex-1 px-3 py-2 bg-background rounded-lg text-xs font-mono break-all">
                           {baseUrl}/api/webhooks/google/{appData.googleWebhookId}
                         </code>
-                        <CopyButton text={`${baseUrl}/api/webhooks/google/${appData.googleWebhookId}`} />
+                        <CopyButton
+                          text={`${baseUrl}/api/webhooks/google/${appData.googleWebhookId}`}
+                        />
                       </div>
                       <WebhookActions appId={appData.id} platform="google" />
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground">
                       Webhook ID not generated.
-                      <WebhookActions appId={appData.id} platform="google" showGenerate />
+                      <WebhookActions
+                        appId={appData.id}
+                        platform="google"
+                        showGenerate
+                      />
                     </div>
                   )}
                 </div>
@@ -176,37 +219,68 @@ export default async function WebhooksPage({
             </div>
             <div>
               <h3 className="font-semibold">Apple Setup Instructions</h3>
-              <p className="text-xs text-muted-foreground">Server-to-Server Notifications V2</p>
+              <p className="text-xs text-muted-foreground">
+                Server-to-Server Notifications V2
+              </p>
             </div>
           </div>
-          
+
           <ol className="space-y-3 text-sm text-muted-foreground">
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">1</span>
-              <span>Go to <a href="https://appstoreconnect.apple.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">App Store Connect <ExternalLink className="w-3 h-3" /></a></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                1
+              </span>
+              <span>
+                Go to{" "}
+                <a
+                  href="https://appstoreconnect.apple.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  App Store Connect <ExternalLink className="w-3 h-3" />
+                </a>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">2</span>
-              <span>Navigate to <strong>My Apps → Your App → App Information</strong></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                2
+              </span>
+              <span>
+                Navigate to <strong>My Apps → Your App → App Information</strong>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">3</span>
-              <span>Scroll to <strong>App Store Server Notifications</strong></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                3
+              </span>
+              <span>
+                Scroll to <strong>App Store Server Notifications</strong>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">4</span>
-              <span>Paste your app&apos;s webhook URL for <strong>Production</strong> and <strong>Sandbox</strong></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                4
+              </span>
+              <span>
+                Paste your app&apos;s webhook URL for <strong>Production</strong>{" "}
+                and <strong>Sandbox</strong>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">5</span>
-              <span>Select <strong>Version 2 Notifications</strong></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                5
+              </span>
+              <span>
+                Select <strong>Version 2 Notifications</strong>
+              </span>
             </li>
           </ol>
-          
+
           <div className="mt-4 pt-4 border-t border-border">
-            <a 
-              href="https://developer.apple.com/documentation/appstoreservernotifications" 
-              target="_blank" 
+            <a
+              href="https://developer.apple.com/documentation/appstoreservernotifications"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
             >
@@ -223,41 +297,82 @@ export default async function WebhooksPage({
             </div>
             <div>
               <h3 className="font-semibold">Google Play Setup Instructions</h3>
-              <p className="text-xs text-muted-foreground">Real-time Developer Notifications</p>
+              <p className="text-xs text-muted-foreground">
+                Real-time Developer Notifications
+              </p>
             </div>
           </div>
-          
+
           <ol className="space-y-3 text-sm text-muted-foreground">
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">1</span>
-              <span>Go to <a href="https://console.cloud.google.com/cloudpubsub" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Google Cloud Console <ExternalLink className="w-3 h-3" /></a></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                1
+              </span>
+              <span>
+                Go to{" "}
+                <a
+                  href="https://console.cloud.google.com/cloudpubsub"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Google Cloud Console <ExternalLink className="w-3 h-3" />
+                </a>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">2</span>
-              <span>Create a <strong>Pub/Sub topic</strong> for your app</span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                2
+              </span>
+              <span>
+                Create a <strong>Pub/Sub topic</strong> for your app
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">3</span>
-              <span>Create a <strong>push subscription</strong> with your webhook URL</span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                3
+              </span>
+              <span>
+                Create a <strong>push subscription</strong> with your webhook URL
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">4</span>
-              <span>Go to <a href="https://play.google.com/console" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Google Play Console <ExternalLink className="w-3 h-3" /></a></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                4
+              </span>
+              <span>
+                Go to{" "}
+                <a
+                  href="https://play.google.com/console"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Google Play Console <ExternalLink className="w-3 h-3" />
+                </a>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">5</span>
-              <span>Navigate to <strong>Monetization setup → Real-time notifications</strong></span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                5
+              </span>
+              <span>
+                Navigate to{" "}
+                <strong>Monetization setup → Real-time notifications</strong>
+              </span>
             </li>
             <li className="flex gap-2">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">6</span>
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 text-green-500 text-xs flex items-center justify-center font-medium">
+                6
+              </span>
               <span>Enter your Pub/Sub topic name</span>
             </li>
           </ol>
-          
+
           <div className="mt-4 pt-4 border-t border-border">
-            <a 
-              href="https://developer.android.com/google/play/billing/getting-ready#configure-rtdn" 
-              target="_blank" 
+            <a
+              href="https://developer.android.com/google/play/billing/getting-ready#configure-rtdn"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
             >
@@ -276,10 +391,12 @@ export default async function WebhooksPage({
           <div>
             <h3 className="font-semibold mb-1">Why are webhooks important?</h3>
             <p className="text-sm text-muted-foreground">
-              Webhooks are the <strong>source of truth</strong> for subscription status. Apple and Google send real-time notifications 
-              when subscriptions are renewed, cancelled, refunded, or expire. This ensures your database is always in sync with 
-              the actual subscription state, even when users manage subscriptions outside your app (e.g., through Settings on iOS 
-              or Play Store on Android).
+              Webhooks are the <strong>source of truth</strong> for subscription
+              status. Apple and Google send real-time notifications when
+              subscriptions are renewed, cancelled, refunded, or expire. This
+              ensures your database is always in sync with the actual
+              subscription state, even when users manage subscriptions outside
+              your app (e.g., through Settings on iOS or Play Store on Android).
             </p>
           </div>
         </div>
@@ -379,7 +496,11 @@ export default async function WebhooksPage({
                           : "bg-purple-500/10 text-purple-500"
                       }`}
                     >
-                      {event.source === "ios" ? "Apple" : event.source === "android" ? "Google" : event.source}
+                      {event.source === "ios"
+                        ? "Apple"
+                        : event.source === "android"
+                        ? "Google"
+                        : event.source}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -392,7 +513,11 @@ export default async function WebhooksPage({
                           : "bg-emerald-500/10 text-emerald-500"
                       }`}
                     >
-                      {event.environment === "Sandbox" ? "🧪 Sandbox" : event.environment === "Test" ? "🔬 Test" : "🚀 Production"}
+                      {event.environment === "Sandbox"
+                        ? "🧪 Sandbox"
+                        : event.environment === "Test"
+                        ? "🔬 Test"
+                        : "🚀 Production"}
                     </span>
                   </td>
                   <td className="px-6 py-4">

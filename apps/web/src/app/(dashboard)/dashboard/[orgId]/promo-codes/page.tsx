@@ -1,14 +1,23 @@
-import Link from "next/link";
-import { Tag, Plus, Calendar, Users, Percent } from "lucide-react";
-import { fetchPromoCodes } from "@/app/actions/dashboard";
+"use client";
 
-export default async function PromoCodesPage({
-  params,
-}: {
-  params: Promise<{ orgId: string }>;
-}) {
-  const { orgId } = await params;
-  const promoCodes = await fetchPromoCodes();
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Tag, Plus, Calendar, Users, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+
+export default function PromoCodesPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
+
+  const { data: promoCodes, isLoading } = trpc.promoCodes.list.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -37,7 +46,8 @@ export default async function PromoCodesPage({
           </div>
           <h2 className="text-xl font-semibold mb-2">No promo codes yet</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Create promotional codes to offer discounts, free trials, or free subscriptions to your users.
+            Create promotional codes to offer discounts, free trials, or free
+            subscriptions to your users.
           </p>
           <Link
             href={`/dashboard/${orgId}/promo-codes/new`}
@@ -70,8 +80,12 @@ export default async function PromoCodesPage({
                 </span>
               </div>
 
-              <h3 className="font-semibold text-lg mb-1">{promo.name || promo.code}</h3>
-              <p className="text-xs font-mono text-muted-foreground mb-2">{promo.code}</p>
+              <h3 className="font-semibold text-lg mb-1">
+                {promo.name || promo.code}
+              </h3>
+              <p className="text-xs font-mono text-muted-foreground mb-2">
+                {promo.code}
+              </p>
               <p className="text-sm text-muted-foreground mb-4">
                 {promo.type === "percentage_discount"
                   ? `${promo.discountPercent || promo.discountAmount}% discount`
@@ -86,7 +100,8 @@ export default async function PromoCodesPage({
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="w-4 h-4" />
                   <span>
-                    {promo.redemptionCount || 0} / {promo.maxRedemptions || "∞"} redeemed
+                    {promo.redemptionCount || 0} / {promo.maxRedemptions || "∞"}{" "}
+                    redeemed
                   </span>
                 </div>
                 {promo.expiresAt && (
@@ -105,4 +120,3 @@ export default async function PromoCodesPage({
     </div>
   );
 }
-

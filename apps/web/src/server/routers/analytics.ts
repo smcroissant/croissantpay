@@ -10,8 +10,11 @@ import {
 } from "@/lib/services/analytics";
 import { getOrganizationUsage, getUsageWarnings } from "@/lib/services/usage";
 import { getWebhookStats, getRecentWebhookEvents } from "@/lib/services/webhooks";
-import { getApp } from "@/lib/services/apps";
+import { getApp, getAppsByOrganization } from "@/lib/services/apps";
 import { TRPCError } from "@trpc/server";
+import { db } from "@/lib/db";
+import { webhookEvent, app } from "@/lib/db/schema";
+import { inArray, desc } from "drizzle-orm";
 
 export const analyticsRouter = createTRPCRouter({
   // Get dashboard stats
@@ -83,12 +86,61 @@ export const analyticsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const app = await getApp(input.appId);
-      if (!app || app.organizationId !== ctx.organizationId) {
+      const appData = await getApp(input.appId);
+      if (!appData || appData.organizationId !== ctx.organizationId) {
         throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
       }
 
       return getRecentWebhookEvents(input.appId, input.limit);
+    }),
+
+  // Get all webhook events for all apps in organization
+  webhookEventsAll: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(100).default(50) }))
+    .query(async ({ ctx, input }) => {
+      const apps = await getAppsByOrganization(ctx.organizationId);
+
+      if (apps.length === 0) {
+        return [];
+      }
+
+      const appIds = apps.map((a) => a.id);
+
+      const events = await db
+        .select({
+          id: webhookEvent.id,
+          eventType: webhookEvent.eventType,
+          platform: webhookEvent.platform,
+          environment: webhookEvent.environment,
+          processedAt: webhookEvent.processedAt,
+          error: webhookEvent.error,
+          createdAt: webhookEvent.createdAt,
+        })
+        .from(webhookEvent)
+        .where(inArray(webhookEvent.appId, appIds))
+        .orderBy(desc(webhookEvent.createdAt))
+        .limit(input.limit);
+
+      // Transform to include derived source and status fields
+      return events.map((event) => {
+        let status: string;
+        if (event.error) {
+          status = "failed";
+        } else if (event.processedAt) {
+          status = "processed";
+        } else {
+          status = "pending";
+        }
+
+        return {
+          id: event.id,
+          eventType: event.eventType,
+          source: event.platform, // 'ios' or 'android'
+          status,
+          environment: event.environment,
+          createdAt: event.createdAt,
+        };
+      });
     }),
 });
 

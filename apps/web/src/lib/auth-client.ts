@@ -1,26 +1,13 @@
 import { createAuthClient } from "better-auth/react";
 import { stripeClient } from "@better-auth/stripe/client";
-import { organizationClient, inferOrgAdditionalFields } from "better-auth/client/plugins";
+import { organizationClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   plugins: [
-    // Organization plugin with custom field inference
+    // Organization plugin
     // See: https://www.better-auth.com/docs/plugins/organization
-    organizationClient({
-      schema: inferOrgAdditionalFields({
-        organization: {
-          additionalFields: {
-            onboardingCompleted: {
-              type: "boolean",
-            },
-            onboardingStep: {
-              type: "number",
-            },
-          },
-        },
-      }),
-    }),
+    organizationClient(),
     stripeClient({
       subscription: true, // Enable subscription management
     }),

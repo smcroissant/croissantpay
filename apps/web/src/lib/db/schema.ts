@@ -189,6 +189,10 @@ export const app = pgTable(
     // Settings (for forwarding to your own webhook)
     webhookUrl: text("webhook_url"),
     webhookSecret: text("webhook_secret"),
+    // SDK Integration test tracking
+    lastIntegrationTest: timestamp("last_integration_test"),
+    lastIntegrationTestPlatform: text("last_integration_test_platform"), // ios, android, web
+    lastIntegrationTestVersion: text("last_integration_test_version"), // SDK version
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
