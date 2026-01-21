@@ -156,10 +156,10 @@ export default function PrivacyPage() {
               <li>Restrict processing of your data</li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              To exercise these rights, contact us at{" "}
-              <a href="mailto:privacy@croissantpay.dev" className="text-primary hover:underline">
-                privacy@croissantpay.dev
-              </a>
+              To exercise these rights,{" "}
+              <Link href="/contact" className="text-primary hover:underline">
+                contact us through our form
+              </Link>.
             </p>
           </section>
 
@@ -223,19 +223,14 @@ export default function PrivacyPage() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
             <p className="text-muted-foreground mb-4">
-              If you have questions about this Privacy Policy, please contact us:
+              If you have questions about this Privacy Policy, please{" "}
+              <Link href="/contact" className="text-primary hover:underline">
+                contact us through our form
+              </Link>.
             </p>
-            <ul className="list-none space-y-2 text-muted-foreground">
-              <li>
-                Email:{" "}
-                <a href="mailto:privacy@croissantpay.dev" className="text-primary hover:underline">
-                  privacy@croissantpay.dev
-                </a>
-              </li>
-              <li>
-                Address: 123 Rue de la Paix, 75002 Paris, France
-              </li>
-            </ul>
+            <p className="text-muted-foreground">
+              Address: 123 Rue de la Paix, 75002 Paris, France
+            </p>
           </section>
         </div>
       </main>

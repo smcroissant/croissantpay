@@ -55,8 +55,16 @@ export function Footer() {
               <li><Link href="/about" className="hover:text-foreground transition-colors">About</Link></li>
               <li><Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
               <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
-              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               <li><Link href="https://github.com/croissantpay/croissantpay" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/acceptable-use" className="hover:text-foreground transition-colors">Acceptable Use</Link></li>
             </ul>
           </div>
         </div>

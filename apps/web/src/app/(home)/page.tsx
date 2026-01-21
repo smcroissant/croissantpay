@@ -92,7 +92,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm mb-8">
             <Zap className="w-4 h-4" />
-            <span>Open-source RevenueCat alternative</span>
+            <span>Open-source in-app purchase infrastructure</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
             In-App Purchases

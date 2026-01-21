@@ -48,7 +48,7 @@ export default function IntroductionPage() {
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-4">Introduction to CroissantPay</h1>
         <p className="text-xl text-muted-foreground mb-12">
-          The open-source RevenueCat alternative for React Native in-app purchases
+          Open-source in-app purchase infrastructure for React Native
         </p>
 
         {/* What is CroissantPay */}
