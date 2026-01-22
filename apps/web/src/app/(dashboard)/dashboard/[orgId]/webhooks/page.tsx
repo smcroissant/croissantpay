@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import {
   Bell,
@@ -14,6 +15,15 @@ import {
   Shield,
   AlertTriangle,
   Loader2,
+  Send,
+  Webhook,
+  Plus,
+  Key,
+  Trash2,
+  PlayCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
@@ -29,19 +39,93 @@ function GooglePlayIcon({ className }: { className?: string }) {
   );
 }
 
+// Tab type for switching between incoming and outgoing webhooks
+type WebhookTab = "incoming" | "outgoing";
+
 export default function WebhooksPage() {
   const params = useParams();
   const orgId = params.orgId as string;
+  const [activeTab, setActiveTab] = useState<WebhookTab>("incoming");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [showWebhookUrl, setShowWebhookUrl] = useState(false);
+  const [webhookUrlInput, setWebhookUrlInput] = useState("");
+  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [newWebhookSecret, setNewWebhookSecret] = useState("");
 
   const { data: webhookEvents, isLoading: loadingEvents } =
     trpc.analytics.webhookEventsAll.useQuery({ limit: 50 });
   const { data: apps, isLoading: loadingApps } = trpc.apps.list.useQuery();
+
+  // Outbound webhook queries
+  const { data: webhookDeliveries, isLoading: loadingDeliveries, refetch: refetchDeliveries } =
+    trpc.apps.getWebhookDeliveries.useQuery(
+      { appId: selectedAppId || "", limit: 50 },
+      { enabled: !!selectedAppId && activeTab === "outgoing" }
+    );
+
+  const { data: deliveryStats, refetch: refetchStats } =
+    trpc.apps.getWebhookDeliveryStats.useQuery(
+      { appId: selectedAppId || "" },
+      { enabled: !!selectedAppId && activeTab === "outgoing" }
+    );
+
+  const { data: webhookConfig, refetch: refetchConfig } =
+    trpc.apps.getWebhookConfig.useQuery(
+      { appId: selectedAppId || "" },
+      { enabled: !!selectedAppId && activeTab === "outgoing" }
+    );
+
+  // Mutations
+  const utils = trpc.useUtils();
+
+  const configureWebhookMutation = trpc.apps.configureWebhook.useMutation({
+    onSuccess: (data) => {
+      setNewWebhookSecret(data.webhookSecret);
+      setShowSecretModal(true);
+      setWebhookUrlInput("");
+      refetchConfig();
+      refetchDeliveries();
+      refetchStats();
+    },
+  });
+
+  const disableWebhookMutation = trpc.apps.disableWebhook.useMutation({
+    onSuccess: () => {
+      refetchConfig();
+    },
+  });
+
+  const rotateSecretMutation = trpc.apps.rotateWebhookSecret.useMutation({
+    onSuccess: (data) => {
+      setNewWebhookSecret(data.webhookSecret);
+      setShowSecretModal(true);
+    },
+  });
+
+  const sendTestMutation = trpc.apps.sendTestWebhook.useMutation({
+    onSuccess: () => {
+      refetchDeliveries();
+      refetchStats();
+    },
+  });
+
+  const retryDeliveryMutation = trpc.apps.retryWebhookDelivery.useMutation({
+    onSuccess: () => {
+      refetchDeliveries();
+      refetchStats();
+    },
+  });
 
   // Get the base URL for webhook endpoints
   const baseUrl =
     typeof window !== "undefined" ? window.location.origin : "https://your-domain.com";
 
   const isLoading = loadingEvents || loadingApps;
+
+  // Set first app as selected if none selected
+  if (!selectedAppId && apps && apps.length > 0) {
+    setSelectedAppId(apps[0].id);
+  }
 
   if (isLoading) {
     return (
@@ -58,31 +142,112 @@ export default function WebhooksPage() {
         <div>
           <h1 className="text-2xl font-bold">Webhooks</h1>
           <p className="text-muted-foreground">
-            Configure and monitor webhook events from Apple and Google
+            Configure incoming webhooks from stores and outgoing webhooks to your server
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors">
-          <Filter className="w-4 h-4" />
-          Filter
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab("incoming")}
+          className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-px ${
+            activeTab === "incoming"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4" />
+            Incoming (from Stores)
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab("outgoing")}
+          className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-px ${
+            activeTab === "outgoing"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Send className="w-4 h-4" />
+            Outgoing (to Your Server)
+          </div>
         </button>
       </div>
 
-      {/* Security Notice */}
-      <div className="bg-gradient-to-r from-blue-500/5 to-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-blue-500 mb-1">
-              Secure Webhook URLs
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Each app has a unique webhook ID for security. Use the app-specific
-              URLs below to ensure notifications are routed correctly and to
-              prevent unauthorized access.
+      {/* Secret Modal */}
+      {showSecretModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <Key className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Webhook Secret Created</h3>
+                <p className="text-sm text-muted-foreground">
+                  Save this secret securely - it won&apos;t be shown again
+                </p>
+              </div>
+            </div>
+            <div className="bg-secondary/50 rounded-xl p-4 mb-4">
+              <code className="text-sm font-mono break-all">{newWebhookSecret}</code>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Use this secret to verify webhook signatures using the{" "}
+              <code className="text-xs bg-secondary px-1 py-0.5 rounded">X-CroissantPay-Signature</code> header.
             </p>
+            <div className="flex gap-2">
+              <CopyButton text={newWebhookSecret} />
+              <button
+                onClick={() => setShowSecretModal(false)}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
+              >
+                I&apos;ve saved the secret
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === "incoming" ? (
+        <>
+          {/* Security Notice */}
+          <div className="bg-gradient-to-r from-blue-500/5 to-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-blue-500 mb-1">
+                  Secure Webhook URLs
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Each app has a unique webhook ID for security. Use the app-specific
+                  URLs below to ensure notifications are routed correctly and to
+                  prevent unauthorized access.
+                </p>
+              </div>
+            </div>
+          </div>
+
+      {/* App Selector */}
+      {apps && apps.length > 0 && (
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium">Select App:</label>
+          <select
+            value={selectedAppId || ""}
+            onChange={(e) => setSelectedAppId(e.target.value)}
+            className="px-4 py-2 rounded-xl bg-secondary border border-border text-sm"
+          >
+            {apps.map((app) => (
+              <option key={app.id} value={app.id}>
+                {app.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* App Webhook URLs */}
       {!apps || apps.length === 0 ? (
@@ -99,9 +264,9 @@ export default function WebhooksPage() {
             Create App
           </Link>
         </div>
-      ) : (
+      ) : selectedAppId && (
         <div className="space-y-4">
-          {apps.map((appData) => (
+          {apps.filter((app) => app.id === selectedAppId).map((appData) => (
             <div
               key={appData.id}
               className="bg-card border border-border rounded-2xl p-6"
@@ -402,161 +567,552 @@ export default function WebhooksPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Events"
-          value={webhookEvents?.length.toString() || "0"}
-          icon={Bell}
-        />
-        <StatCard
-          label="Processed"
-          value={
-            webhookEvents
-              ?.filter((e) => e.status === "processed")
-              .length.toString() || "0"
-          }
-          icon={CheckCircle}
-          color="green"
-        />
-        <StatCard
-          label="Failed"
-          value={
-            webhookEvents
-              ?.filter((e) => e.status === "failed")
-              .length.toString() || "0"
-          }
-          icon={XCircle}
-          color="red"
-        />
-        <StatCard
-          label="Pending"
-          value={
-            webhookEvents
-              ?.filter((e) => e.status === "pending")
-              .length.toString() || "0"
-          }
-          icon={Clock}
-          color="yellow"
-        />
-      </div>
-
-      {/* Events Table */}
-      {!webhookEvents || webhookEvents.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Bell className="w-8 h-8 text-primary" />
+      {/* Stats - filtered by selected app */}
+      {(() => {
+        const filteredEvents = webhookEvents?.filter((e) => e.appId === selectedAppId) || [];
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <StatCard
+              label="Total Events"
+              value={filteredEvents.length.toString()}
+              icon={Bell}
+            />
+            <StatCard
+              label="Processed"
+              value={
+                filteredEvents
+                  .filter((e) => e.status === "processed")
+                  .length.toString()
+              }
+              icon={CheckCircle}
+              color="green"
+            />
+            <StatCard
+              label="Failed"
+              value={
+                filteredEvents
+                  .filter((e) => e.status === "failed")
+                  .length.toString()
+              }
+              icon={XCircle}
+              color="red"
+            />
+            <StatCard
+              label="Pending"
+              value={
+                filteredEvents
+                  .filter((e) => e.status === "pending")
+                  .length.toString()
+              }
+              icon={Clock}
+              color="yellow"
+            />
           </div>
-          <h2 className="text-xl font-semibold mb-2">No webhook events yet</h2>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Webhook events from Apple App Store and Google Play will appear here.
-          </p>
-        </div>
+        );
+      })()}
+
+          {/* Events Table - filtered by selected app */}
+          {(() => {
+            const filteredEvents = webhookEvents?.filter((e) => e.appId === selectedAppId) || [];
+            return filteredEvents.length === 0 ? (
+              <div className="bg-card border border-border rounded-2xl p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Bell className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">No webhook events yet</h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Webhook events from Apple App Store and Google Play will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-2xl overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Event Type
+                      </th>
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Source
+                      </th>
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Environment
+                      </th>
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Date
+                      </th>
+                      <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEvents.map((event) => (
+                      <tr
+                        key={event.id}
+                        className="border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <span className="font-medium">{event.eventType}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                              event.source === "ios"
+                                ? "bg-blue-500/10 text-blue-500"
+                                : event.source === "android"
+                                ? "bg-green-500/10 text-green-500"
+                                : "bg-purple-500/10 text-purple-500"
+                            }`}
+                          >
+                            {event.source === "ios"
+                              ? "Apple"
+                              : event.source === "android"
+                              ? "Google"
+                              : event.source}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              event.environment === "Sandbox"
+                                ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
+                                : event.environment === "Test"
+                                ? "bg-purple-500/10 text-purple-500 border border-purple-500/20"
+                                : "bg-emerald-500/10 text-emerald-500"
+                            }`}
+                          >
+                            {event.environment === "Sandbox"
+                              ? "🧪 Sandbox"
+                              : event.environment === "Test"
+                              ? "🔬 Test"
+                              : "🚀 Production"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                              event.status === "processed"
+                                ? "bg-green-500/10 text-green-500"
+                                : event.status === "failed"
+                                ? "bg-red-500/10 text-red-500"
+                                : "bg-yellow-500/10 text-yellow-500"
+                            }`}
+                          >
+                            {event.status === "processed" && (
+                              <CheckCircle className="w-3 h-3" />
+                            )}
+                            {event.status === "failed" && (
+                              <XCircle className="w-3 h-3" />
+                            )}
+                            {event.status === "pending" && (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            {event.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {new Date(event.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          {event.status === "failed" && (
+                            <button className="p-2 rounded-lg hover:bg-secondary transition-colors">
+                              <RefreshCw className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </>
       ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Event Type
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Source
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Environment
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Date
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {webhookEvents.map((event) => (
-                <tr
-                  key={event.id}
-                  className="border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <span className="font-medium">{event.eventType}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs ${
-                        event.source === "ios"
-                          ? "bg-blue-500/10 text-blue-500"
-                          : event.source === "android"
-                          ? "bg-green-500/10 text-green-500"
-                          : "bg-purple-500/10 text-purple-500"
-                      }`}
-                    >
-                      {event.source === "ios"
-                        ? "Apple"
-                        : event.source === "android"
-                        ? "Google"
-                        : event.source}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        event.environment === "Sandbox"
-                          ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
-                          : event.environment === "Test"
-                          ? "bg-purple-500/10 text-purple-500 border border-purple-500/20"
-                          : "bg-emerald-500/10 text-emerald-500"
-                      }`}
-                    >
-                      {event.environment === "Sandbox"
-                        ? "🧪 Sandbox"
-                        : event.environment === "Test"
-                        ? "🔬 Test"
-                        : "🚀 Production"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
-                        event.status === "processed"
-                          ? "bg-green-500/10 text-green-500"
-                          : event.status === "failed"
-                          ? "bg-red-500/10 text-red-500"
-                          : "bg-yellow-500/10 text-yellow-500"
-                      }`}
-                    >
-                      {event.status === "processed" && (
+        <>
+          {/* Outgoing Webhooks Tab */}
+          <div className="bg-gradient-to-r from-purple-500/5 to-purple-500/10 border border-purple-500/20 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Send className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-purple-500 mb-1">
+                  Real-time Event Notifications
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Receive real-time notifications on your server when subscription events happen.
+                  Events include subscription renewals, cancellations, billing issues, and more.
+                  Similar to RevenueCat webhooks, you&apos;ll get comprehensive data to keep your backend in sync.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* App Selector */}
+          {apps && apps.length > 0 && (
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium">Select App:</label>
+              <select
+                value={selectedAppId || ""}
+                onChange={(e) => setSelectedAppId(e.target.value)}
+                className="px-4 py-2 rounded-xl bg-secondary border border-border text-sm"
+              >
+                {apps.map((app) => (
+                  <option key={app.id} value={app.id}>
+                    {app.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedAppId && (
+            <>
+              {/* Webhook Configuration */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Webhook className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Webhook Endpoint</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {webhookConfig?.isConfigured
+                          ? "Configured and active"
+                          : "Not configured"}
+                      </p>
+                    </div>
+                  </div>
+                  {webhookConfig?.isConfigured && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-green-500/10 text-green-500">
                         <CheckCircle className="w-3 h-3" />
-                      )}
-                      {event.status === "failed" && (
-                        <XCircle className="w-3 h-3" />
-                      )}
-                      {event.status === "pending" && (
-                        <Clock className="w-3 h-3" />
-                      )}
-                      {event.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {new Date(event.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    {event.status === "failed" && (
-                      <button className="p-2 rounded-lg hover:bg-secondary transition-colors">
-                        <RefreshCw className="w-4 h-4" />
+                        Active
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {webhookConfig?.isConfigured ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-secondary rounded-lg text-sm font-mono">
+                        {showWebhookUrl ? webhookConfig.webhookUrl : "••••••••••••••••••••"}
+                      </code>
+                      <button
+                        onClick={() => setShowWebhookUrl(!showWebhookUrl)}
+                        className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                      >
+                        {showWebhookUrl ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
+                      <CopyButton text={webhookConfig.webhookUrl || ""} />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => sendTestMutation.mutate({ appId: selectedAppId })}
+                        disabled={sendTestMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        {sendTestMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <PlayCircle className="w-4 h-4" />
+                        )}
+                        Send Test Webhook
+                      </button>
+                      <button
+                        onClick={() => rotateSecretMutation.mutate({ appId: selectedAppId })}
+                        disabled={rotateSecretMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                      >
+                        {rotateSecretMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Key className="w-4 h-4" />
+                        )}
+                        Rotate Secret
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Are you sure you want to disable webhooks?")) {
+                            disableWebhookMutation.mutate({ appId: selectedAppId });
+                          }
+                        }}
+                        disabled={disableWebhookMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        {disableWebhookMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        Disable
+                      </button>
+                    </div>
+
+                    {sendTestMutation.isSuccess && (
+                      <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm">
+                        <p className="font-medium text-green-500">Test webhook sent!</p>
+                        <p className="text-muted-foreground">
+                          Status: {sendTestMutation.data?.statusCode} • Duration: {sendTestMutation.data?.duration}ms
+                        </p>
+                      </div>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
+                    {sendTestMutation.isError && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm">
+                        <p className="font-medium text-red-500">Failed to send test webhook</p>
+                        <p className="text-muted-foreground">{sendTestMutation.error.message}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Enter your webhook endpoint URL to start receiving real-time subscription events.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={webhookUrlInput}
+                        onChange={(e) => setWebhookUrlInput(e.target.value)}
+                        placeholder="https://your-server.com/webhooks/croissantpay"
+                        className="flex-1 px-4 py-2 rounded-xl bg-secondary border border-border text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          if (webhookUrlInput) {
+                            configureWebhookMutation.mutate({
+                              appId: selectedAppId,
+                              webhookUrl: webhookUrlInput,
+                            });
+                          }
+                        }}
+                        disabled={!webhookUrlInput || configureWebhookMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        {configureWebhookMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
+                        Configure
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Delivery Stats */}
+              {deliveryStats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <StatCard label="Total Sent" value={deliveryStats.total.toString()} icon={Send} />
+                  <StatCard
+                    label="Successful"
+                    value={deliveryStats.success.toString()}
+                    icon={CheckCircle}
+                    color="green"
+                  />
+                  <StatCard
+                    label="Failed"
+                    value={deliveryStats.failed.toString()}
+                    icon={XCircle}
+                    color="red"
+                  />
+                  <StatCard
+                    label="Pending"
+                    value={deliveryStats.pending.toString()}
+                    icon={Clock}
+                    color="yellow"
+                  />
+                  <StatCard label="Last 24h" value={deliveryStats.last24h.toString()} icon={Bell} />
+                  <StatCard
+                    label="Success Rate"
+                    value={`${deliveryStats.successRate}%`}
+                    icon={CheckCircle}
+                    color={deliveryStats.successRate >= 95 ? "green" : deliveryStats.successRate >= 80 ? "yellow" : "red"}
+                  />
+                </div>
+              )}
+
+              {/* Event Types Reference */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <h3 className="font-semibold mb-4">Supported Event Types</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                  {[
+                    "INITIAL_PURCHASE",
+                    "RENEWAL",
+                    "CANCELLATION",
+                    "UNCANCELLATION",
+                    "BILLING_ISSUE",
+                    "BILLING_ISSUE_RESOLVED",
+                    "EXPIRATION",
+                    "REFUND",
+                    "TRIAL_STARTED",
+                    "TRIAL_CONVERTED",
+                    "PRODUCT_CHANGE",
+                    "GRACE_PERIOD_ENTERED",
+                    "SUBSCRIPTION_PAUSED",
+                    "SUBSCRIPTION_RESUMED",
+                  ].map((eventType) => (
+                    <code
+                      key={eventType}
+                      className="px-2 py-1 bg-secondary rounded text-xs font-mono"
+                    >
+                      {eventType}
+                    </code>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delivery Logs */}
+              <div className="bg-card border border-border rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-border">
+                  <h3 className="font-semibold">Recent Deliveries</h3>
+                </div>
+                {loadingDeliveries ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : !webhookDeliveries || webhookDeliveries.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Send className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">No webhook deliveries yet</p>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/30">
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          Event
+                        </th>
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          User
+                        </th>
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          Status
+                        </th>
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          Duration
+                        </th>
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          Time
+                        </th>
+                        <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {webhookDeliveries.map((delivery) => (
+                        <tr
+                          key={delivery.id}
+                          className="border-b border-border last:border-b-0 hover:bg-secondary/50 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <code className="text-xs font-mono bg-secondary px-2 py-1 rounded">
+                              {delivery.eventType}
+                            </code>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">
+                            {delivery.appUserId || "-"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                                delivery.status === "success"
+                                  ? "bg-green-500/10 text-green-500"
+                                  : delivery.status === "failed"
+                                  ? "bg-red-500/10 text-red-500"
+                                  : "bg-yellow-500/10 text-yellow-500"
+                              }`}
+                            >
+                              {delivery.status === "success" && <CheckCircle className="w-3 h-3" />}
+                              {delivery.status === "failed" && <XCircle className="w-3 h-3" />}
+                              {delivery.status === "pending" && <Clock className="w-3 h-3" />}
+                              {delivery.statusCode || delivery.status}
+                            </span>
+                            {delivery.errorMessage && (
+                              <p className="text-xs text-red-400 mt-1">{delivery.errorMessage}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">
+                            {delivery.duration ? `${delivery.duration}ms` : "-"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">
+                            {new Date(delivery.createdAt).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            {delivery.status === "failed" && (
+                              <button
+                                onClick={() => retryDeliveryMutation.mutate({ deliveryId: delivery.id })}
+                                disabled={retryDeliveryMutation.isPending}
+                                className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
+                                title="Retry"
+                              >
+                                {retryDeliveryMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Integration Guide */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <h3 className="font-semibold mb-4">Integration Guide</h3>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h4 className="font-medium mb-2">1. Verify Webhook Signatures</h4>
+                    <p className="text-muted-foreground mb-2">
+                      All webhooks include a <code className="bg-secondary px-1 py-0.5 rounded text-xs">X-CroissantPay-Signature</code> header.
+                      Verify this using your webhook secret:
+                    </p>
+                    <pre className="bg-secondary rounded-xl p-4 text-xs overflow-x-auto">
+{`const crypto = require('crypto');
+
+function verifySignature(payload, signature, secret) {
+  const expected = 'sha256=' + crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}`}
+                    </pre>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">2. Handle Events</h4>
+                    <p className="text-muted-foreground">
+                      Process events based on the <code className="bg-secondary px-1 py-0.5 rounded text-xs">event.type</code> field.
+                      Each event includes comprehensive subscriber info, subscription details, and entitlements.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">3. Return 200 OK</h4>
+                    <p className="text-muted-foreground">
+                      Return a 2xx status code to acknowledge receipt. Failed deliveries will be retried up to 3 times.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );

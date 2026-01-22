@@ -109,6 +109,7 @@ export const analyticsRouter = createTRPCRouter({
       const events = await db
         .select({
           id: webhookEvent.id,
+          appId: webhookEvent.appId,
           eventType: webhookEvent.eventType,
           platform: webhookEvent.platform,
           environment: webhookEvent.environment,
@@ -134,6 +135,7 @@ export const analyticsRouter = createTRPCRouter({
 
         return {
           id: event.id,
+          appId: event.appId,
           eventType: event.eventType,
           source: event.platform, // 'ios' or 'android'
           status,

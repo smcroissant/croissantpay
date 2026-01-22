@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Smartphone, Mail, Lock, User, ArrowRight, Github } from "lucide-react";
-import { signUp, signIn } from "@/lib/auth-client";
+import { signUp, signIn, authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,6 +13,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lastMethod, setLastMethod] = useState<string | null>(null);
+
+  // Get last used login method on mount
+  useEffect(() => {
+    const method = authClient.getLastUsedLoginMethod?.();
+    setLastMethod(method || null);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +56,12 @@ export default function RegisterPage() {
     }
   };
 
+  const LastUsedBadge = () => (
+    <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">
+      Last used
+    </span>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6 animated-gradient">
       <div className="w-full max-w-md">
@@ -71,14 +84,23 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               onClick={() => handleOAuthSignIn("github")}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
+                lastMethod === "github"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary hover:bg-secondary/80"
+              }`}
             >
               <Github className="w-5 h-5" />
               <span>GitHub</span>
+              {lastMethod === "github" && <LastUsedBadge />}
             </button>
             <button
               onClick={() => handleOAuthSignIn("google")}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
+                lastMethod === "google"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary hover:bg-secondary/80"
+              }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -99,6 +121,7 @@ export default function RegisterPage() {
                 />
               </svg>
               <span>Google</span>
+              {lastMethod === "google" && <LastUsedBadge />}
             </button>
           </div>
 
@@ -137,7 +160,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="block text-sm font-medium mb-2">
+                Email
+                {lastMethod === "email" && <LastUsedBadge />}
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -208,4 +234,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

@@ -51,6 +51,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Two-Factor Authentication
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  // Last Login Method tracking
+  lastLoginMethod: text("last_login_method"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -100,6 +104,45 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Two-Factor Authentication table
+// See: https://www.better-auth.com/docs/plugins/2fa
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    secret: text("secret"),
+    backupCodes: text("backup_codes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [index("two_factor_user_idx").on(table.userId)]
+);
+
+// Passkey table for WebAuthn/FIDO2 authentication
+// See: https://www.better-auth.com/docs/plugins/passkey
+export const passkey = pgTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialId: text("credential_id").notNull().unique(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    aaguid: text("aaguid"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("passkey_user_idx").on(table.userId)]
+);
 
 // ============================================================================
 // ORGANIZATION & TEAM
@@ -540,7 +583,7 @@ export const apiRequestLogRelations = relations(apiRequestLog, ({ one }) => ({
 }));
 
 // ============================================================================
-// WEBHOOK EVENTS LOG
+// WEBHOOK EVENTS LOG (Incoming from Apple/Google)
 // ============================================================================
 
 export const webhookEvent = pgTable(
@@ -568,6 +611,77 @@ export const webhookEvent = pgTable(
     index("webhook_event_type_idx").on(table.eventType),
   ]
 );
+
+// ============================================================================
+// WEBHOOK DELIVERIES (Outbound to Customer Servers)
+// ============================================================================
+
+export const webhookDeliveryStatusEnum = pgEnum("webhook_delivery_status", [
+  "pending",
+  "success",
+  "failed",
+]);
+
+export const webhookDelivery = pgTable(
+  "webhook_delivery",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    appId: uuid("app_id")
+      .notNull()
+      .references(() => app.id, { onDelete: "cascade" }),
+    // Event info
+    eventId: text("event_id").notNull(), // Unique event ID (evt_xxx)
+    eventType: text("event_type").notNull(), // e.g., subscription.renewed
+    // Source reference (optional - link to incoming webhook that triggered this)
+    sourceWebhookEventId: uuid("source_webhook_event_id").references(
+      () => webhookEvent.id,
+      { onDelete: "set null" }
+    ),
+    // Subscriber context
+    subscriberId: uuid("subscriber_id").references(() => subscriber.id, {
+      onDelete: "set null",
+    }),
+    appUserId: text("app_user_id"),
+    // Delivery details
+    webhookUrl: text("webhook_url").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    // Response
+    status: webhookDeliveryStatusEnum("status").notNull().default("pending"),
+    statusCode: integer("status_code"),
+    responseBody: text("response_body"),
+    errorMessage: text("error_message"),
+    // Performance
+    duration: integer("duration"), // milliseconds
+    // Retry tracking
+    attemptCount: integer("attempt_count").notNull().default(1),
+    nextRetryAt: timestamp("next_retry_at"),
+    // Timestamps
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at"),
+  },
+  (table) => [
+    index("webhook_delivery_app_idx").on(table.appId),
+    index("webhook_delivery_event_type_idx").on(table.eventType),
+    index("webhook_delivery_status_idx").on(table.status),
+    index("webhook_delivery_subscriber_idx").on(table.subscriberId),
+    index("webhook_delivery_created_idx").on(table.createdAt),
+  ]
+);
+
+export const webhookDeliveryRelations = relations(webhookDelivery, ({ one }) => ({
+  app: one(app, {
+    fields: [webhookDelivery.appId],
+    references: [app.id],
+  }),
+  subscriber: one(subscriber, {
+    fields: [webhookDelivery.subscriberId],
+    references: [subscriber.id],
+  }),
+  sourceWebhookEvent: one(webhookEvent, {
+    fields: [webhookDelivery.sourceWebhookEventId],
+    references: [webhookEvent.id],
+  }),
+}));
 
 // ============================================================================
 // PROMO CODES
@@ -861,10 +975,26 @@ export const promoCodeRedemptionRelations = relations(
   })
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   organizationMemberships: many(organizationMember),
+  twoFactor: one(twoFactor),
+  passkeys: many(passkey),
+}));
+
+export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
+  user: one(user, {
+    fields: [twoFactor.userId],
+    references: [user.id],
+  }),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, {
+    fields: [passkey.userId],
+    references: [user.id],
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

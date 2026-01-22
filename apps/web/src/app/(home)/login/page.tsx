@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Smartphone, Mail, Lock, ArrowRight, Github } from "lucide-react";
-import { signIn } from "@/lib/auth-client";
+import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint } from "lucide-react";
+import { signIn, authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +12,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lastMethod, setLastMethod] = useState<string | null>(null);
+
+  // Get last used login method on mount
+  useEffect(() => {
+    const method = authClient.getLastUsedLoginMethod?.();
+    setLastMethod(method || null);
+    
+    // Preload passkey for conditional UI
+    if (
+      typeof window !== "undefined" &&
+      window.PublicKeyCredential?.isConditionalMediationAvailable
+    ) {
+      window.PublicKeyCredential.isConditionalMediationAvailable().then(
+        (available) => {
+          if (available) {
+            authClient.signIn.passkey?.({ autoFill: true });
+          }
+        }
+      );
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +47,9 @@ export default function LoginPage() {
 
       if (result.error) {
         setError(result.error.message || "Login failed");
+      } else if (result.data && "twoFactorRedirect" in result.data && result.data.twoFactorRedirect) {
+        // User has 2FA enabled, redirect to verification page
+        router.push("/login/verify-2fa");
       } else {
         router.push("/dashboard");
       }
@@ -47,6 +71,31 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasskeySignIn = async () => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await authClient.signIn.passkey?.();
+
+      if (result?.error) {
+        setError(result.error.message || "Passkey sign in failed");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError("Passkey sign in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const LastUsedBadge = () => (
+    <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">
+      Last used
+    </span>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6 animated-gradient">
       <div className="w-full max-w-md">
@@ -65,18 +114,42 @@ export default function LoginPage() {
             Sign in to your account
           </p>
 
+          {/* Passkey Sign In */}
+          <button
+            onClick={handlePasskeySignIn}
+            disabled={loading}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl mb-4 transition-colors ${
+              lastMethod === "passkey"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-secondary hover:bg-secondary/80"
+            }`}
+          >
+            <Fingerprint className="w-5 h-5" />
+            <span>Sign in with Passkey</span>
+            {lastMethod === "passkey" && <LastUsedBadge />}
+          </button>
+
           {/* OAuth Buttons */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               onClick={() => handleOAuthSignIn("github")}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
+                lastMethod === "github"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary hover:bg-secondary/80"
+              }`}
             >
               <Github className="w-5 h-5" />
               <span>GitHub</span>
+              {lastMethod === "github" && <LastUsedBadge />}
             </button>
             <button
               onClick={() => handleOAuthSignIn("google")}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
+                lastMethod === "google"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary hover:bg-secondary/80"
+              }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -97,6 +170,7 @@ export default function LoginPage() {
                 />
               </svg>
               <span>Google</span>
+              {lastMethod === "google" && <LastUsedBadge />}
             </button>
           </div>
 
@@ -120,7 +194,10 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="block text-sm font-medium mb-2">
+                Email
+                {lastMethod === "email" && <LastUsedBadge />}
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -128,6 +205,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  autoComplete="username webauthn"
                   className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
                   required
                 />
@@ -143,6 +221,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="current-password webauthn"
                   className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
                   required
                 />
@@ -168,7 +247,11 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed glow-primary"
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                lastMethod === "email"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 glow-primary"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              }`}
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -182,7 +265,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-muted-foreground text-sm mt-6">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-primary hover:underline">
               Sign up
             </Link>
@@ -192,4 +275,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

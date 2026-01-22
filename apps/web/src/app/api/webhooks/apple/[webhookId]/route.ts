@@ -11,6 +11,10 @@ import { eq, and } from "drizzle-orm";
 import { AppleStoreClient, AppleNotificationPayload } from "@/lib/stores/apple";
 import { refreshEntitlements } from "@/lib/services/entitlements";
 import { getAppByAppleWebhookId } from "@/lib/services/apps";
+import {
+  queueComprehensiveWebhook,
+  mapAppleEventType,
+} from "@/lib/services/customer-webhooks";
 
 // Helper to find product by store product ID
 async function findProductByStoreId(appId: string, storeProductId: string) {
@@ -288,4 +292,30 @@ async function processAppleNotification(
     .update(webhookEvent)
     .set({ processedAt: new Date() })
     .where(eq(webhookEvent.eventId, payload.notificationUUID));
+
+  // Send webhook to customer's server
+  const webhookEventType = mapAppleEventType(notificationType, subtype);
+  
+  // Get the webhookEvent record ID for source tracking
+  const [webhookRecord] = await db
+    .select({ id: webhookEvent.id })
+    .from(webhookEvent)
+    .where(eq(webhookEvent.eventId, payload.notificationUUID))
+    .limit(1);
+
+  await queueComprehensiveWebhook({
+    appId: appConfig.id,
+    eventType: webhookEventType,
+    subscriberId: existingSub.subscriber.id,
+    subscriptionId: existingSub.subscription.id,
+    productId: existingSub.subscription.productId,
+    platform: "ios",
+    environment: data.environment === "Sandbox" ? "sandbox" : "production",
+    storeEvent: {
+      type: notificationType,
+      subtype: subtype,
+      event_id: payload.notificationUUID,
+    },
+    sourceWebhookEventId: webhookRecord?.id,
+  });
 }

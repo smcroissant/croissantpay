@@ -34,13 +34,22 @@ export async function POST(
     );
   }
 
-  // Send test webhook
-  const result = await sendCustomerWebhook(appId, "subscriber.created", {
-    subscriberId: "test_subscriber_123",
-    appUserId: "test_user_123",
-    isTest: true,
+  // Send test webhook with comprehensive format
+  const result = await sendCustomerWebhook(appId, "TEST", {
+    subscriber_info: {
+      id: "test_subscriber_123",
+      app_user_id: "test_user_123",
+      original_app_user_id: null,
+      aliases: [],
+      first_seen_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+      attributes: {},
+    },
+    entitlements: [],
+    platform: "ios",
+    environment: "sandbox",
+    is_test: true,
     message: "This is a test webhook from CroissantPay",
-    timestamp: new Date().toISOString(),
   });
 
   if (!result) {
@@ -56,6 +65,7 @@ export async function POST(
     duration: result.duration,
     error: result.error,
     responseBody: result.responseBody?.substring(0, 500), // Truncate response
+    deliveryId: result.deliveryId,
   });
 }
 

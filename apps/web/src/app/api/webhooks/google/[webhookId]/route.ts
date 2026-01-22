@@ -14,6 +14,10 @@ import {
 } from "@/lib/stores/google";
 import { refreshEntitlements } from "@/lib/services/entitlements";
 import { getAppByGoogleWebhookId } from "@/lib/services/apps";
+import {
+  queueComprehensiveWebhook,
+  mapGoogleEventType,
+} from "@/lib/services/customer-webhooks";
 
 // Google Play Real-time Developer Notifications with secure webhook ID
 export async function POST(
@@ -262,6 +266,24 @@ async function processSubscriptionNotification(
 
     // Refresh entitlements
     await refreshEntitlements(sub.subscriber.id);
+
+    // Send webhook to customer's server
+    const webhookEventType = mapGoogleEventType(notificationType);
+
+    await queueComprehensiveWebhook({
+      appId: appConfig.id,
+      eventType: webhookEventType,
+      subscriberId: sub.subscriber.id,
+      subscriptionId: sub.subscription.id,
+      productId: sub.subscription.productId,
+      platform: "android",
+      environment: "production", // Google doesn't have sandbox mode in RTDN
+      storeEvent: {
+        type: `SUBSCRIPTION_${notificationType}`,
+        event_id: webhookRecordId,
+      },
+      sourceWebhookEventId: webhookRecordId,
+    });
   } catch (error) {
     console.error("Error fetching subscription from Google:", error);
   }

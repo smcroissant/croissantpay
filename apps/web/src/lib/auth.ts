@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization as organizationPlugin } from "better-auth/plugins";
+import { organization as organizationPlugin, twoFactor, lastLoginMethod } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
 import { stripe } from "@better-auth/stripe";
 import Stripe from "stripe";
 import { db } from "./db";
@@ -19,6 +20,47 @@ const stripeClient = isCloudMode() && process.env.STRIPE_SECRET_KEY
 // Build plugins array dynamically
 function getPlugins() {
   const pluginList = [];
+
+  // Add Last Login Method plugin
+  // See: https://www.better-auth.com/docs/plugins/last-login-method
+  pluginList.push(
+    lastLoginMethod({
+      storeInDatabase: true,
+    })
+  );
+
+  // Add Two-Factor Authentication plugin
+  // See: https://www.better-auth.com/docs/plugins/2fa
+  pluginList.push(
+    twoFactor({
+      issuer: "CroissantPay",
+      otpOptions: {
+        async sendOTP({ user, otp }) {
+          await sendRawEmail({
+            to: user.email,
+            subject: "Your CroissantPay verification code",
+            html: `
+              <h2>Verification Code</h2>
+              <p>Your one-time password is:</p>
+              <h1 style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #6366f1;">${otp}</h1>
+              <p>This code expires in 3 minutes.</p>
+              <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+            `,
+          });
+        },
+      },
+    })
+  );
+
+  // Add Passkey plugin for passwordless authentication
+  // See: https://www.better-auth.com/docs/plugins/passkey
+  pluginList.push(
+    passkey({
+      rpID: process.env.PASSKEY_RP_ID || "localhost",
+      rpName: "CroissantPay",
+      origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    })
+  );
   
   // Add organization plugin with full configuration
   // See: https://www.better-auth.com/docs/plugins/organization

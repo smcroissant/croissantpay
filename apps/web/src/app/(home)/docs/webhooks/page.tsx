@@ -56,77 +56,80 @@ export default function WebhooksDocsPage() {
           {/* Event Types */}
           <h2>Event Types</h2>
 
+          <p>
+            CroissantPay uses RevenueCat-compatible event types, making migration easy.
+            Events are triggered when Apple App Store or Google Play send notifications.
+          </p>
+
           <div className="not-prose">
             <div className="grid gap-4">
               <EventCategory
-                title="Subscriber Events"
+                title="Initial Purchase Events"
                 events={[
                   {
-                    name: "subscriber.created",
+                    name: "INITIAL_PURCHASE",
                     description:
-                      "A new subscriber was created (first SDK initialization)",
+                      "New subscription was purchased for the first time",
                   },
                   {
-                    name: "subscriber.updated",
-                    description: "Subscriber attributes or aliases changed",
+                    name: "NON_RENEWING_PURCHASE",
+                    description: "A non-renewing or one-time purchase was made",
                   },
                 ]}
               />
 
               <EventCategory
-                title="Subscription Events"
+                title="Renewal Events"
                 events={[
                   {
-                    name: "subscription.created",
-                    description: "New subscription was purchased",
-                  },
-                  {
-                    name: "subscription.renewed",
+                    name: "RENEWAL",
                     description: "Subscription was automatically renewed",
                   },
                   {
-                    name: "subscription.canceled",
-                    description: "User canceled their subscription",
-                  },
-                  {
-                    name: "subscription.expired",
-                    description: "Subscription period ended",
-                  },
-                  {
-                    name: "subscription.billing_issue",
-                    description: "Payment failed (entering grace period)",
-                  },
-                  {
-                    name: "subscription.product_change",
-                    description: "User changed subscription plan",
+                    name: "PRODUCT_CHANGE",
+                    description: "User upgraded or downgraded their subscription",
                   },
                 ]}
               />
 
               <EventCategory
-                title="Entitlement Events"
+                title="Cancellation Events"
                 events={[
                   {
-                    name: "entitlement.granted",
-                    description: "User gained access to an entitlement",
+                    name: "CANCELLATION",
+                    description: "User turned off auto-renewal (will expire at period end)",
                   },
                   {
-                    name: "entitlement.revoked",
-                    description: "User lost access to an entitlement",
+                    name: "UNCANCELLATION",
+                    description: "User re-enabled auto-renewal before expiration",
                   },
                 ]}
               />
 
               <EventCategory
-                title="Purchase Events"
+                title="Billing Events"
                 events={[
                   {
-                    name: "purchase.completed",
-                    description: "One-time purchase completed",
+                    name: "BILLING_ISSUE",
+                    description: "Payment failed, subscription entering grace period or retry",
                   },
                   {
-                    name: "purchase.refunded",
-                    description: "Purchase was refunded",
+                    name: "BILLING_ISSUE_RESOLVED",
+                    description: "Payment issue was resolved, subscription is active again",
+                  },
+                ]}
+              />
+
+              <EventCategory
+                title="Expiration & Refund Events"
+                events={[
+                  {
+                    name: "EXPIRATION",
+                    description: "Subscription has expired and is no longer active",
+                  },
+                  {
+                    name: "REFUND",
+                    description: "Purchase was refunded or revoked by the store",
                   },
                 ]}
               />
@@ -134,14 +137,52 @@ export default function WebhooksDocsPage() {
               <EventCategory
                 title="Trial Events"
                 events={[
-                  { name: "trial.started", description: "Free trial started" },
+                  { name: "TRIAL_STARTED", description: "Free trial period started" },
                   {
-                    name: "trial.converted",
+                    name: "TRIAL_CONVERTED",
                     description: "Trial converted to paid subscription",
                   },
                   {
-                    name: "trial.expired",
-                    description: "Trial ended without conversion",
+                    name: "TRIAL_CANCELLED",
+                    description: "User cancelled during trial (before conversion)",
+                  },
+                ]}
+              />
+
+              <EventCategory
+                title="Grace Period Events"
+                events={[
+                  {
+                    name: "GRACE_PERIOD_ENTERED",
+                    description: "Subscription entered grace period due to billing issue",
+                  },
+                  {
+                    name: "GRACE_PERIOD_EXITED",
+                    description: "Grace period ended (either resolved or expired)",
+                  },
+                ]}
+              />
+
+              <EventCategory
+                title="Pause Events (Android only)"
+                events={[
+                  {
+                    name: "SUBSCRIPTION_PAUSED",
+                    description: "User paused their subscription (Google Play only)",
+                  },
+                  {
+                    name: "SUBSCRIPTION_RESUMED",
+                    description: "User resumed their paused subscription",
+                  },
+                ]}
+              />
+
+              <EventCategory
+                title="Test Events"
+                events={[
+                  {
+                    name: "TEST",
+                    description: "Test webhook sent from the dashboard",
                   },
                 ]}
               />
@@ -154,21 +195,79 @@ export default function WebhooksDocsPage() {
             Webhook Payload
           </h2>
 
-          <p>Every webhook event has the following structure:</p>
+          <p>
+            Every webhook event includes comprehensive subscriber, subscription, and entitlement data.
+            This format is designed to be compatible with RevenueCat webhooks:
+          </p>
 
-          <pre className="bg-secondary rounded-xl p-4 overflow-x-auto">
+          <pre className="bg-secondary rounded-xl p-4 overflow-x-auto text-xs">
             <code>{`{
-  "id": "evt_abc123...",
-  "type": "subscription.renewed",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "appId": "app_xyz789...",
-  "data": {
-    "subscriberId": "sub_123...",
-    "appUserId": "user_456",
-    "productIdentifier": "pro_monthly",
-    "expiresDate": "2024-02-15T10:30:00Z",
-    "isTrialPeriod": false,
-    // ... additional event-specific data
+  "api_version": "1.0",
+  "event": {
+    "id": "evt_abc123...",
+    "type": "RENEWAL",
+    "app_id": "app_xyz789...",
+    "event_timestamp_ms": 1705315800000,
+    
+    // Complete subscriber information
+    "subscriber_info": {
+      "id": "sub_123...",
+      "app_user_id": "user_456",
+      "original_app_user_id": null,
+      "aliases": [],
+      "first_seen_at": "2024-01-01T00:00:00Z",
+      "last_seen_at": "2024-01-15T10:30:00Z",
+      "attributes": {}
+    },
+    
+    // Product details
+    "product": {
+      "id": "prod_abc...",
+      "identifier": "pro_monthly",
+      "store_product_id": "com.yourapp.pro.monthly",
+      "platform": "ios",
+      "type": "auto_renewable_subscription",
+      "display_name": "Pro Monthly",
+      "subscription_period": "P1M",
+      "trial_period": "P7D"
+    },
+    
+    // Subscription state
+    "subscription": {
+      "id": "subscription_123...",
+      "status": "active",
+      "original_transaction_id": "1000000123456789",
+      "latest_transaction_id": "1000000987654321",
+      "purchase_date": "2024-01-15T10:30:00Z",
+      "original_purchase_date": "2023-12-15T10:30:00Z",
+      "expires_date": "2024-02-15T10:30:00Z",
+      "auto_renew_enabled": true,
+      "is_trial_period": false,
+      "is_intro_period": false,
+      "canceled_at": null,
+      "cancellation_reason": null,
+      "grace_period_expires_date": null
+    },
+    
+    // Current entitlements snapshot
+    "entitlements": [
+      {
+        "id": "ent_abc...",
+        "identifier": "premium",
+        "is_active": true,
+        "expires_date": "2024-02-15T10:30:00Z",
+        "product_identifier": "pro_monthly"
+      }
+    ],
+    
+    "platform": "ios",
+    "environment": "production",
+    
+    // Original store notification info
+    "store_event": {
+      "type": "DID_RENEW",
+      "event_id": "apple_notification_uuid"
+    }
   }
 }`}</code>
           </pre>
