@@ -324,8 +324,6 @@ pnpm db:seed
 - [x] Subscription lifecycle management
 - [x] Docker deployment
 - [x] Expo demo app
-- [ ] A/B testing for paywalls
-- [ ] Promo codes
 - [ ] Cohort analysis
 - [ ] Integrations (Amplitude, Mixpanel)
 

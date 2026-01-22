@@ -11,210 +11,6 @@ export interface BlogPost {
 
 export const posts: BlogPost[] = [
   {
-    slug: "introducing-ab-testing",
-    title: "Introducing A/B Testing for Offerings",
-    excerpt: "Learn how to optimize your paywall conversion rates with our new A/B testing feature. Run experiments, track results, and make data-driven decisions.",
-    date: "January 2, 2026",
-    readTime: "5 min read",
-    author: "CroissantPay Team",
-    category: "Feature",
-    content: `
-We're thrilled to announce the launch of A/B testing for offerings in CroissantPay. This powerful feature allows you to experiment with different paywall configurations and optimize your conversion rates based on real data.
-
-## Why A/B Testing Matters
-
-In the world of mobile monetization, small changes can lead to significant revenue improvements. A/B testing enables you to:
-
-- **Test different price points** - Find the optimal pricing that maximizes both conversions and revenue
-- **Experiment with offerings** - Try different product combinations to see what resonates with users
-- **Optimize paywall design** - Test copy, layout, and presentation to improve engagement
-
-## How It Works
-
-Setting up an A/B test in CroissantPay is straightforward:
-
-1. **Create variants** - Define two or more offering configurations you want to test
-2. **Set traffic allocation** - Decide what percentage of users see each variant
-3. **Define success metrics** - Choose what you're optimizing for (conversion rate, revenue per user, etc.)
-4. **Launch the experiment** - Start collecting data from real users
-5. **Analyze results** - View statistically significant results in your dashboard
-
-## Getting Started
-
-To create your first A/B test:
-
-\`\`\`typescript
-// In your dashboard, navigate to Experiments
-// Click "New Experiment" and select your offerings
-
-// Or use the API:
-const experiment = await croissantpay.experiments.create({
-  name: "Pricing Test Q1",
-  variants: [
-    { offeringId: "offering_a", weight: 50 },
-    { offeringId: "offering_b", weight: 50 },
-  ],
-  metrics: ["conversion_rate", "revenue_per_user"],
-});
-\`\`\`
-
-## Best Practices
-
-- **Run tests for sufficient duration** - We recommend at least 2 weeks to account for weekly patterns
-- **Test one variable at a time** - This makes it easier to understand what's driving results
-- **Set a minimum sample size** - Ensure statistical significance before making decisions
-- **Document your hypotheses** - Keep track of what you expect and why
-
-## What's Next
-
-We're continuing to improve our experimentation platform with:
-
-- Multi-armed bandit algorithms for faster optimization
-- Cohort-based analysis
-- Integration with external analytics tools
-
-Start running your first experiment today and let data drive your monetization strategy!
-    `,
-  },
-  {
-    slug: "promo-codes-guide",
-    title: "The Complete Guide to Promo Codes",
-    excerpt: "Everything you need to know about creating and managing promotional codes. From percentage discounts to free trial extensions.",
-    date: "December 28, 2025",
-    readTime: "8 min read",
-    author: "CroissantPay Team",
-    category: "Tutorial",
-    content: `
-Promotional codes are a powerful tool for user acquisition, retention, and engagement. This guide covers everything you need to know about creating and managing promo codes in CroissantPay.
-
-## Types of Promo Codes
-
-CroissantPay supports several types of promotional offers:
-
-### Percentage Discounts
-Reduce the price by a percentage (e.g., 20% off).
-
-\`\`\`typescript
-const promoCode = await croissantpay.promoCodes.create({
-  code: "SAVE20",
-  type: "percentage",
-  value: 20,
-  maxRedemptions: 1000,
-  expiresAt: "2026-03-31",
-});
-\`\`\`
-
-### Fixed Amount Discounts
-Reduce the price by a fixed amount (e.g., $5 off).
-
-\`\`\`typescript
-const promoCode = await croissantpay.promoCodes.create({
-  code: "FIVE_OFF",
-  type: "fixed",
-  value: 500, // in cents
-  currency: "USD",
-});
-\`\`\`
-
-### Free Trial Extensions
-Give users extra trial time.
-
-\`\`\`typescript
-const promoCode = await croissantpay.promoCodes.create({
-  code: "EXTRATRIAL",
-  type: "trial_extension",
-  trialDays: 14,
-});
-\`\`\`
-
-## Creating Promo Codes
-
-### Via Dashboard
-
-1. Navigate to **Promo Codes** in your dashboard
-2. Click **Create Promo Code**
-3. Choose your discount type and value
-4. Set optional limits (max redemptions, expiry date, eligible products)
-5. Click **Create**
-
-### Via API
-
-\`\`\`typescript
-const response = await fetch('/api/v1/promo-codes', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer your_api_key',
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    code: "WELCOME50",
-    type: "percentage",
-    value: 50,
-    maxRedemptions: 500,
-    applicableProducts: ["premium_monthly", "premium_annual"],
-    firstTimeOnly: true,
-  }),
-});
-\`\`\`
-
-## Bulk Generation
-
-Need to create many codes at once? Use our bulk generation feature:
-
-\`\`\`typescript
-const codes = await croissantpay.promoCodes.bulkCreate({
-  prefix: "PARTNER_",
-  count: 100,
-  type: "percentage",
-  value: 25,
-  singleUse: true,
-});
-// Creates: PARTNER_A1B2C3, PARTNER_D4E5F6, ...
-\`\`\`
-
-## Redemption in Your App
-
-When a user enters a promo code in your app:
-
-\`\`\`typescript
-import { CroissantPay } from '@croissantpay/react-native';
-
-const redeemPromoCode = async (code: string) => {
-  try {
-    const result = await CroissantPay.redeemPromoCode(code);
-    
-    if (result.success) {
-      // Show success message
-      Alert.alert('Success', \`Code applied: \${result.discount}\`);
-    }
-  } catch (error) {
-    // Handle invalid or expired code
-    Alert.alert('Error', 'Invalid promo code');
-  }
-};
-\`\`\`
-
-## Tracking & Analytics
-
-Monitor your promo code performance:
-
-- **Redemption rate** - How many codes are being used
-- **Revenue impact** - Total discounts given vs. incremental revenue
-- **User segments** - Who's using promo codes
-- **Conversion lift** - Do promo codes improve conversion?
-
-## Best Practices
-
-1. **Set expiry dates** - Create urgency and limit exposure
-2. **Use unique codes for partnerships** - Track performance by source
-3. **Limit redemptions per user** - Prevent abuse
-4. **A/B test discount amounts** - Find the optimal discount level
-5. **Monitor fraud patterns** - Watch for unusual redemption patterns
-
-Happy promoting! 🎉
-    `,
-  },
-  {
     slug: "subscription-pricing-strategies",
     title: "Subscription Pricing Strategies That Work",
     excerpt: "Learn proven pricing strategies for mobile subscriptions. From free trials to annual discounts, find what works for your app.",
@@ -321,7 +117,7 @@ const product = {
 
 Never guess—always test:
 
-1. **A/B test price points** - Test $9.99 vs $12.99 vs $14.99
+1. **Test price points** - Test $9.99 vs $12.99 vs $14.99
 2. **Test trial lengths** - Compare 3-day vs 7-day vs 14-day
 3. **Test annual discounts** - Find the optimal savings percentage
 4. **Test paywall copy** - Words matter as much as price
@@ -345,17 +141,7 @@ Key metrics to track:
 
 ## Get Started
 
-Use CroissantPay's A/B testing to experiment with pricing:
-
-\`\`\`typescript
-const experiment = await CroissantPay.createExperiment({
-  name: "Price Test",
-  variants: [
-    { offering: "price_a", weight: 50 }, // $9.99
-    { offering: "price_b", weight: 50 }, // $12.99
-  ],
-});
-\`\`\`
+Start experimenting with different price points by creating multiple offerings in your CroissantPay dashboard. Track conversion rates and revenue metrics to find the optimal pricing for your app.
 
 Remember: the "right" price is the one that maximizes your business goals, whether that's revenue, user growth, or market share.
     `,
@@ -654,8 +440,7 @@ CroissantPay is a complete solution for managing subscriptions and in-app purcha
 ### For Your Business
 - **Analytics dashboard** - Track MRR, churn, LTV, and more
 - **Real-time webhooks** - Never miss a subscription event
-- **A/B testing** - Optimize your paywalls with experiments
-- **Promo codes** - Create and manage promotional offers
+- **Offerings management** - Organize products for your paywalls
 
 ## Open Source at Heart
 
@@ -734,7 +519,6 @@ This is just the beginning. Our roadmap includes:
 - Native iOS and Android SDKs
 - Flutter support
 - Advanced analytics
-- More A/B testing features
 - Enterprise features
 
 ## Thank You

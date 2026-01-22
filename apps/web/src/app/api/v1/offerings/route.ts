@@ -7,10 +7,8 @@ import {
   product,
   productEntitlement,
   entitlement,
-  subscriber,
 } from "@/lib/db/schema";
-import { eq, asc, and } from "drizzle-orm";
-import { getOfferingForSubscriber } from "@/lib/services/experiments";
+import { eq, asc } from "drizzle-orm";
 
 // Package type detection based on subscription period
 function getPackageType(
@@ -149,74 +147,7 @@ async function buildOfferingResponse(off: typeof offering.$inferSelect) {
 
 export async function GET(request: NextRequest) {
   return withApiKey(request, async ({ app }) => {
-    // Check for subscriber ID in headers or query params (for A/B testing)
-    const { searchParams } = new URL(request.url);
-    const appUserId = searchParams.get("appUserId");
-    const platform = searchParams.get("platform") as "ios" | "android" | null;
-    const appVersion = searchParams.get("appVersion");
-    const country = searchParams.get("country");
-
-    let experimentInfo: {
-      experimentId?: string;
-      variantId?: string;
-      paywallConfig?: Record<string, unknown>;
-    } | null = null;
-
-    // If we have a subscriber, check for A/B test assignment
-    if (appUserId) {
-      const [sub] = await db
-        .select()
-        .from(subscriber)
-        .where(
-          and(
-            eq(subscriber.appId, app.id),
-            eq(subscriber.appUserId, appUserId)
-          )
-        )
-        .limit(1);
-
-      if (sub) {
-        const experimentResult = await getOfferingForSubscriber(
-          app.id,
-          sub.id,
-          {
-            platform: platform || undefined,
-            appVersion: appVersion || undefined,
-            country: country || undefined,
-          }
-        );
-
-        if (experimentResult) {
-          experimentInfo = {
-            experimentId: experimentResult.experimentId,
-            variantId: experimentResult.variantId,
-            paywallConfig: experimentResult.paywallConfig,
-          };
-
-          // If experiment specifies a different offering, use that
-          if (experimentResult.offeringId) {
-            const [expOffering] = await db
-              .select()
-              .from(offering)
-              .where(eq(offering.id, experimentResult.offeringId))
-              .limit(1);
-
-            if (expOffering) {
-              const offeringData = await buildOfferingResponse(expOffering);
-
-              return successResponse({
-                currentOfferingId: expOffering.identifier,
-                current: offeringData,
-                offerings: { [expOffering.identifier]: offeringData },
-                experiment: experimentInfo,
-              });
-            }
-          }
-        }
-      }
-    }
-
-    // Get all offerings for this app (default behavior)
+    // Get all offerings for this app
     const offerings = await db
       .select()
       .from(offering)
@@ -246,7 +177,6 @@ export async function GET(request: NextRequest) {
         ? offeringsMap[currentOffering.identifier]
         : null,
       offerings: offeringsMap,
-      experiment: experimentInfo,
     });
   });
 }

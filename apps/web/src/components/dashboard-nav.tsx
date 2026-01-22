@@ -10,8 +10,6 @@ import {
   Settings,
   BarChart3,
   Bell,
-  Tag,
-  FlaskConical,
   ScrollText,
 } from "lucide-react";
 
@@ -23,8 +21,6 @@ const navItems = [
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/api-logs", icon: ScrollText, label: "API Logs" },
   { href: "/webhooks", icon: Bell, label: "Webhooks" },
-  { href: "/promo-codes", icon: Tag, label: "Promo Codes" },
-  { href: "/experiments", icon: FlaskConical, label: "Experiments" },
 ];
 
 export function DashboardNav() {

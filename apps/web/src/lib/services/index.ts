@@ -16,9 +16,3 @@ export * from "./customer-webhooks";
 
 // Analytics
 export * from "./analytics";
-
-// Promo codes
-export * from "./promo-codes";
-
-// A/B Testing
-export * from "./experiments";

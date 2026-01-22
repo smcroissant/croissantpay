@@ -3,20 +3,6 @@ import { Smartphone, Github, Sparkles, Bug, Zap, ArrowRight } from "lucide-react
 
 const releases = [
   {
-    version: "1.2.0",
-    date: "January 2, 2026",
-    title: "A/B Testing & Promo Codes",
-    description: "Run experiments on your offerings and create promotional codes",
-    changes: [
-      { type: "feature", text: "A/B testing for offerings with detailed analytics" },
-      { type: "feature", text: "Promo codes with percentage and fixed discounts" },
-      { type: "feature", text: "Free trial extension promo codes" },
-      { type: "feature", text: "Bulk promo code generation" },
-      { type: "improvement", text: "Improved dashboard analytics" },
-      { type: "improvement", text: "Better webhook retry logic" },
-    ],
-  },
-  {
     version: "1.1.0",
     date: "December 15, 2025",
     title: "Team Management & Invitations",

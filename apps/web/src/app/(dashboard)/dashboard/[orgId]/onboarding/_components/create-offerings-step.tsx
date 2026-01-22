@@ -21,7 +21,7 @@ const createOfferingSchema = z.object({
   identifier: z.string().min(1, "Identifier is required"),
   displayName: z.string().min(1, "Display name is required"),
   description: z.string().optional(),
-  isCurrent: z.boolean().default(false),
+  isCurrent: z.boolean(),
 });
 
 type CreateOfferingFormData = z.infer<typeof createOfferingSchema>;
@@ -114,7 +114,7 @@ export function CreateOfferingsStep({ appId }: CreateOfferingsStepProps) {
   const handleSelectOffering = (offeringId: string) => {
     setSelectedOfferingId(offeringId);
     // Load existing products for this offering
-    const existingProducts = offeringProducts?.map((op) => op.productId) || [];
+    const existingProducts = offeringProducts?.map((op) => op.id) || [];
     setSelectedProductIds(existingProducts);
   };
 
@@ -137,7 +137,7 @@ export function CreateOfferingsStep({ appId }: CreateOfferingsStepProps) {
   // Update selected products when offering products are loaded
   useState(() => {
     if (offeringProducts) {
-      setSelectedProductIds(offeringProducts.map((op) => op.productId));
+      setSelectedProductIds(offeringProducts.map((op) => op.id));
     }
   });
 

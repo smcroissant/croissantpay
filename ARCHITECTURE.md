@@ -138,7 +138,7 @@ crp/
 
 #### Offerings
 - Groups of products shown to users
-- A/B testing support
+- Organize products for paywalls
 
 #### Entitlements
 - Access rights granted by purchases
@@ -155,17 +155,6 @@ crp/
 #### Subscriptions
 - Active subscription tracking
 - Renewal dates, cancellation status
-
-#### Promo Codes
-- Promotional codes for discounts
-- Types: percentage, fixed, trial extension, free subscription
-- Redemption tracking per user
-
-#### Experiments (A/B Testing)
-- Experiments with multiple variants
-- Traffic allocation and targeting
-- Automatic user assignment
-- Conversion tracking and results
 
 ### Schema Relationships
 
@@ -318,98 +307,6 @@ CroissantPay can send real-time events to your servers when subscription events 
 
 **Security:** All webhooks are signed with HMAC-SHA256. Verify the `X-CroissantPay-Signature` header using your webhook secret.
 
-### Promo Codes API
-
-Create and manage promotional codes for discounts, free trials, and free access.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/promo-codes?appId=xxx` | List promo codes |
-| POST | `/api/v1/promo-codes` | Create promo code |
-| GET | `/api/v1/promo-codes/:id` | Get promo code details |
-| PATCH | `/api/v1/promo-codes/:id` | Update promo code |
-| DELETE | `/api/v1/promo-codes/:id` | Delete promo code |
-| POST | `/api/v1/promo-codes/redeem` | Redeem promo code |
-| POST | `/api/v1/promo-codes/redeem?validate=true` | Validate without redeeming |
-
-**Promo Code Types:**
-- `percentage_discount` - X% off the purchase price
-- `fixed_discount` - $X off the purchase price
-- `free_trial_extension` - Extend free trial by X days
-- `free_subscription` - Grant free access for a period (grants entitlements)
-
-**Features:**
-- Auto-generate unique codes or specify custom codes
-- Set max total redemptions and per-user limits
-- Set start and expiration dates
-- Bulk create multiple codes at once
-- Track redemptions and revoke if needed
-
-### A/B Testing API
-
-Run experiments to test different offerings and optimize conversions.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/experiments?appId=xxx` | List experiments |
-| POST | `/api/v1/experiments` | Create experiment with variants |
-| GET | `/api/v1/experiments/:id` | Get experiment details |
-| GET | `/api/v1/experiments/:id?results=true` | Get experiment with results |
-| PATCH | `/api/v1/experiments/:id` | Update experiment (start, pause, complete) |
-| DELETE | `/api/v1/experiments/:id` | Delete experiment |
-| GET | `/api/v1/experiments/:id/variants` | List variants |
-| POST | `/api/v1/experiments/:id/variants` | Add variant |
-| POST | `/api/v1/experiments/track` | Track conversion event |
-
-**How It Works:**
-1. Create an experiment with 2+ variants (e.g., Control vs Variant A)
-2. Each variant can show a different offering or paywall configuration
-3. Users are automatically assigned to variants based on weights
-4. Assignment is deterministic per user (consistent experience)
-5. Track conversions (purchase, trial start, etc.)
-6. View results with conversion rates and statistical significance
-
-**Experiment Configuration:**
-```json
-{
-  "name": "Premium Paywall Test",
-  "hypothesis": "Annual plan highlighted will increase conversions",
-  "trafficAllocation": 100,
-  "targetAudience": {
-    "platforms": ["ios", "android"],
-    "countries": ["US", "CA"]
-  },
-  "variants": [
-    { "name": "Control", "isControl": true, "offeringId": "default", "weight": 50 },
-    { "name": "Annual First", "offeringId": "annual_first", "weight": 50 }
-  ]
-}
-```
-
-**Metrics Tracked:**
-- `conversion_rate` - Purchase / impressions
-- `revenue_per_user` - Total revenue / impressions  
-- `trial_to_paid` - Trial conversions / trial starts
-
-**SDK Integration:**
-The offerings API automatically returns the correct variant for each user:
-```
-GET /api/v1/offerings?appUserId=user123&platform=ios
-```
-
-Response includes experiment info when active:
-```json
-{
-  "currentOfferingId": "annual_first",
-  "current": { ... },
-  "experiment": {
-    "experimentId": "exp_123",
-    "variantId": "var_456",
-    "paywallConfig": { "title": "Special Offer!" }
-  }
-}
-```
-
 ## 🛠️ Tech Stack
 
 ### Backend
@@ -494,8 +391,6 @@ GOOGLE_PACKAGE_NAME=
 - [x] Subscription lifecycle management
 - [x] Database seed script
 - [x] Expo demo app
-- [x] Promo codes support
-- [x] A/B testing for offerings
 
 ### 🔜 Future Enhancements
 - [ ] Cohort analysis

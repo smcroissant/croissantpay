@@ -2,8 +2,6 @@ import { createTRPCRouter } from "@/server/trpc";
 import { appsRouter } from "./apps";
 import { productsRouter } from "./products";
 import { analyticsRouter } from "./analytics";
-import { promoCodesRouter } from "./promo-codes";
-import { experimentsRouter } from "./experiments";
 import { organizationsRouter } from "./organizations";
 import { usersRouter } from "./users";
 import { apiLogsRouter } from "./api-logs";
@@ -18,8 +16,6 @@ export const appRouter = createTRPCRouter({
   apps: appsRouter,
   products: productsRouter,
   analytics: analyticsRouter,
-  promoCodes: promoCodesRouter,
-  experiments: experimentsRouter,
   organizations: organizationsRouter,
   users: usersRouter,
   apiLogs: apiLogsRouter,

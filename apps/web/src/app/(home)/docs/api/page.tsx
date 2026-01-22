@@ -6,8 +6,6 @@ import {
   User,
   Package,
   Receipt,
-  Gift,
-  FlaskConical,
   Webhook,
   AlertCircle,
   Copy,
@@ -70,8 +68,6 @@ export default function ApiReferencePage() {
                 <SidebarLink href="#entitlements">Entitlements</SidebarLink>
                 <SidebarLink href="#offerings">Offerings</SidebarLink>
                 <SidebarLink href="#products">Products</SidebarLink>
-                <SidebarLink href="#promo-codes">Promo Codes</SidebarLink>
-                <SidebarLink href="#experiments">Experiments</SidebarLink>
                 <SidebarLink href="#webhooks">Webhooks</SidebarLink>
               </ul>
             </div>
@@ -409,122 +405,6 @@ export default function ApiReferencePage() {
     "type": "subscription",
     "createdAt": "2024-01-15T10:00:00Z"
   }
-}`}
-            />
-          </section>
-
-          {/* Promo Codes */}
-          <section id="promo-codes" className="mb-16 scroll-mt-20">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Gift className="w-6 h-6 text-primary" />
-              Promo Codes
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Create and manage promotional codes for discounts and free trials.
-            </p>
-
-            <Endpoint
-              method="POST"
-              path="/promo-codes"
-              description="Create a new promo code"
-              requestBody={`{
-  "name": "SUMMER2024",
-  "code": "SUMMER50",
-  "type": "percentage_discount",
-  "discountPercent": 50,
-  "maxRedemptions": 1000,
-  "expiresAt": "2024-09-01T00:00:00Z"
-}`}
-              responseBody={`{
-  "promoCode": {
-    "id": "promo_123",
-    "code": "SUMMER50",
-    "type": "percentage_discount",
-    "discountPercent": 50,
-    "redemptionCount": 0,
-    "maxRedemptions": 1000,
-    "isActive": true
-  }
-}`}
-            />
-
-            <Endpoint
-              method="POST"
-              path="/promo-codes/redeem"
-              description="Redeem a promo code for a subscriber"
-              requestBody={`{
-  "code": "SUMMER50",
-  "appUserId": "user_123"
-}`}
-              responseBody={`{
-  "success": true,
-  "redemption": {
-    "id": "redemption_456",
-    "promoCodeId": "promo_123",
-    "discountApplied": 50,
-    "type": "percentage_discount"
-  }
-}`}
-            />
-          </section>
-
-          {/* Experiments */}
-          <section id="experiments" className="mb-16 scroll-mt-20">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <FlaskConical className="w-6 h-6 text-primary" />
-              Experiments (A/B Testing)
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Run A/B tests on offerings to optimize conversion rates.
-            </p>
-
-            <Endpoint
-              method="GET"
-              path="/experiments"
-              description="List all experiments"
-              responseBody={`{
-  "experiments": [
-    {
-      "id": "exp_123",
-      "name": "Paywall Pricing Test",
-      "status": "running",
-      "trafficAllocation": 50,
-      "variants": [
-        {
-          "id": "var_a",
-          "name": "Control",
-          "offeringId": "default",
-          "weight": 50
-        },
-        {
-          "id": "var_b",
-          "name": "New Pricing",
-          "offeringId": "sale_offering",
-          "weight": 50
-        }
-      ],
-      "results": {
-        "var_a": { "participants": 1000, "conversions": 50 },
-        "var_b": { "participants": 1000, "conversions": 75 }
-      }
-    }
-  ]
-}`}
-            />
-
-            <Endpoint
-              method="POST"
-              path="/experiments/track"
-              description="Track a conversion event for an experiment"
-              requestBody={`{
-  "experimentId": "exp_123",
-  "appUserId": "user_123",
-  "event": "purchase",
-  "revenue": 9.99
-}`}
-              responseBody={`{
-  "success": true,
-  "recorded": true
 }`}
             />
           </section>
