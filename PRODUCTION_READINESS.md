@@ -40,14 +40,14 @@ emailAndPassword: {
 ---
 
 ### 3. Redis-Based Rate Limiting
-**Status:** ❌ IN-MEMORY ONLY  
-**Location:** `apps/web/src/lib/api/rate-limit.ts:9-10`  
-**Issue:** Comment says "In production, use Redis" but still using Map  
-**Risk:** HIGH - Rate limits don't work across multiple instances  
-**Fix Required:**
-- Replace in-memory Map with Redis
-- Use a library like `@upstash/ratelimit` or `ioredis`
-- Update `checkRateLimit()` to use Redis
+**Status:** ✅ COMPLETED  
+**Location:** `apps/web/src/lib/api/rate-limit.ts`, `apps/web/src/lib/redis.ts`  
+**Fix Applied:**
+- Replaced in-memory Map with Redis when `REDIS_URL` is set (ioredis)
+- Fixed-window rate limiting via Lua script (atomic INCR + EXPIRE)
+- In-memory fallback when `REDIS_URL` is unset (e.g. local dev)
+- Fail-open on Redis errors; `checkRateLimit()` is async
+- Set `REDIS_URL` in production for cross-instance rate limiting
 
 ---
 

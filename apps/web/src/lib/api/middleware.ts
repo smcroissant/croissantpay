@@ -54,8 +54,11 @@ export async function withApiKey(
   }
 
   // Check rate limit
-  const rateLimitResult = checkRateLimit(apiKey, isSecretKey ? "secret" : "public");
-  
+  const rateLimitResult = await checkRateLimit(
+    apiKey,
+    isSecretKey ? "secret" : "public"
+  );
+
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { 

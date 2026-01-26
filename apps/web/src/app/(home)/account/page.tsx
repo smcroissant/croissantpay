@@ -49,7 +49,7 @@ export default function AccountSettingsPage() {
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [passkeys, setPasskeys] = useState<Array<{
     id: string;
-    name: string | null;
+    name: string | undefined;
     createdAt: Date | null;
     deviceType: string;
   }>>([]);

@@ -4,29 +4,30 @@ import { checkUsageLimit, incrementApiRequests } from "@/lib/services/usage";
 import { db } from "@/lib/db";
 import { app } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { getRedis } from "@/lib/redis";
 
-// Simple in-memory rate limiter for development
-// In production, use Redis
+// Fixed-window rate limit Lua script (atomic INCR + EXPIRE on first request).
+// Returns [count, ttl] where ttl is seconds until key expiry.
+const RATE_LIMIT_SCRIPT = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+local ttl = redis.call('TTL', KEYS[1])
+return {current, ttl}
+`;
+
+// In-memory fallback when REDIS_URL is not set (e.g. local dev)
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 interface RateLimitConfig {
-  // Requests per window
   limit: number;
-  // Window size in seconds
   windowSeconds: number;
 }
 
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  // Public API key limits (client-side)
-  public: {
-    limit: 100,
-    windowSeconds: 60, // 100 req/min
-  },
-  // Secret API key limits (server-side)
-  secret: {
-    limit: 1000,
-    windowSeconds: 60, // 1000 req/min
-  },
+  public: { limit: 100, windowSeconds: 60 },
+  secret: { limit: 1000, windowSeconds: 60 },
 };
 
 export interface RateLimitResult {
@@ -37,25 +38,62 @@ export interface RateLimitResult {
   retryAfter?: number;
 }
 
-// Check rate limit for a given identifier
-export function checkRateLimit(
-  identifier: string,
+async function checkRateLimitRedis(
+  key: string,
+  type: "public" | "secret"
+): Promise<RateLimitResult> {
+  const config = RATE_LIMITS[type];
+  const redis = getRedis();
+  if (!redis) {
+    return checkRateLimitMemory(key, type);
+  }
+
+  const redisKey = `ratelimit:${key}`;
+  try {
+    const result = await redis.eval(
+      RATE_LIMIT_SCRIPT,
+      1,
+      redisKey,
+      config.windowSeconds.toString()
+    );
+    const [count, ttl] = (result as [number, number]) ?? [0, 0];
+    const now = Date.now();
+    const resetAt = new Date(now + ttl * 1000);
+    const remaining = Math.max(0, config.limit - count);
+    const allowed = count <= config.limit;
+
+    return {
+      allowed,
+      limit: config.limit,
+      remaining,
+      resetAt,
+      retryAfter: allowed ? undefined : Math.max(1, ttl),
+    };
+  } catch (err) {
+    console.error("[rate-limit] Redis error, failing open:", err);
+    return {
+      allowed: true,
+      limit: config.limit,
+      remaining: config.limit - 1,
+      resetAt: new Date(Date.now() + config.windowSeconds * 1000),
+    };
+  }
+}
+
+function checkRateLimitMemory(
+  key: string,
   type: "public" | "secret"
 ): RateLimitResult {
   const config = RATE_LIMITS[type];
   const now = Date.now();
-  const key = `${type}:${identifier}`;
 
   let entry = rateLimitStore.get(key);
-
-  // Reset if window expired
   if (!entry || entry.resetAt <= now) {
     entry = {
       count: 0,
       resetAt: now + config.windowSeconds * 1000,
     };
   }
-
   entry.count++;
   rateLimitStore.set(key, entry);
 
@@ -71,7 +109,17 @@ export function checkRateLimit(
   };
 }
 
-// Middleware to apply rate limiting to API routes
+export async function checkRateLimit(
+  identifier: string,
+  type: "public" | "secret"
+): Promise<RateLimitResult> {
+  const key = `${type}:${identifier}`;
+  if (process.env.REDIS_URL && getRedis()) {
+    return checkRateLimitRedis(key, type);
+  }
+  return checkRateLimitMemory(key, type);
+}
+
 export async function withRateLimit(
   request: NextRequest,
   apiKey: string,
@@ -79,29 +127,24 @@ export async function withRateLimit(
   handler: () => Promise<Response>
 ): Promise<Response> {
   const type = isSecretKey ? "secret" : "public";
-  const result = checkRateLimit(apiKey, type);
+  const result = await checkRateLimit(apiKey, type);
 
-  // Add rate limit headers
   const headers = new Headers();
   headers.set("X-RateLimit-Limit", result.limit.toString());
   headers.set("X-RateLimit-Remaining", result.remaining.toString());
   headers.set("X-RateLimit-Reset", result.resetAt.toISOString());
 
   if (!result.allowed) {
-    headers.set("Retry-After", result.retryAfter?.toString() || "60");
+    headers.set("Retry-After", result.retryAfter?.toString() ?? "60");
     return new NextResponse(
       JSON.stringify({
         error: "Rate limit exceeded",
         retryAfter: result.retryAfter,
       }),
-      {
-        status: 429,
-        headers,
-      }
+      { status: 429, headers }
     );
   }
 
-  // Track API usage for cloud billing
   if (isCloudMode()) {
     try {
       const [foundApp] = await db
@@ -109,7 +152,6 @@ export async function withRateLimit(
         .from(app)
         .where(isSecretKey ? eq(app.secretKey, apiKey) : eq(app.publicKey, apiKey))
         .limit(1);
-
       if (foundApp) {
         await incrementApiRequests(foundApp.organizationId);
       }
@@ -118,56 +160,38 @@ export async function withRateLimit(
     }
   }
 
-  // Execute the handler
   const response = await handler();
-
-  // Add rate limit headers to response
   const newResponse = new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers: response.headers,
   });
-
-  headers.forEach((value, key) => {
-    newResponse.headers.set(key, value);
-  });
-
+  headers.forEach((value, key) => newResponse.headers.set(key, value));
   return newResponse;
 }
 
-// Check organization usage limits (for cloud mode)
 export async function checkOrganizationLimits(
   organizationId: string,
   metric: "subscribers" | "apiRequests" | "apps"
 ): Promise<{ allowed: boolean; error?: string }> {
-  if (!isCloudMode()) {
-    return { allowed: true };
-  }
-
+  if (!isCloudMode()) return { allowed: true };
   const result = await checkUsageLimit(organizationId, metric);
-
   if (!result.allowed) {
     return {
       allowed: false,
       error: `You've reached your ${metric} limit. Please upgrade your plan.`,
     };
   }
-
   return { allowed: true };
 }
 
-// Cleanup old rate limit entries (call periodically)
 export function cleanupRateLimitStore(): void {
   const now = Date.now();
   for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetAt <= now) {
-      rateLimitStore.delete(key);
-    }
+    if (entry.resetAt <= now) rateLimitStore.delete(key);
   }
 }
 
-// Run cleanup every 5 minutes
 if (typeof setInterval !== "undefined") {
   setInterval(cleanupRateLimitStore, 5 * 60 * 1000);
 }
-
