@@ -136,6 +136,59 @@ export class AppleStoreClient {
     return payload as T;
   }
 
+  /**
+   * Verify and decode a JWS signed payload from Apple using the x5c certificate chain.
+   * This verifies the signature using Apple's public key embedded in the JWS header.
+   * 
+   * @param signedPayload - The JWS signed payload from Apple (compact JWS format)
+   * @returns The decoded payload if signature is valid
+   * @throws Error if signature verification fails
+   */
+  static async verifyAndDecodeJWS<T>(signedPayload: string): Promise<T> {
+    try {
+      // Parse the JWS to extract header
+      const parts = signedPayload.split(".");
+      if (parts.length !== 3) {
+        throw new Error("Invalid JWS format");
+      }
+
+      // Decode the header to get x5c certificate chain
+      const header = JSON.parse(
+        Buffer.from(parts[0], "base64url").toString("utf-8")
+      );
+
+      // Extract x5c certificate chain from header
+      if (!header.x5c || !Array.isArray(header.x5c) || header.x5c.length === 0) {
+        throw new Error("Missing x5c certificate chain in JWS header");
+      }
+
+      // Convert the first certificate (leaf certificate) from base64 to PEM format
+      const certDer = Buffer.from(header.x5c[0], "base64");
+      const certPem = `-----BEGIN CERTIFICATE-----\n${certDer.toString("base64").match(/.{1,64}/g)?.join("\n")}\n-----END CERTIFICATE-----`;
+
+      // Import the certificate as a public key
+      const publicKey = await jose.importX509(certPem, "ES256");
+
+      // Verify the JWS signature using compactVerify (for plain JWS, not JWT)
+      const { payload } = await jose.compactVerify(signedPayload, publicKey);
+
+      // Decode the payload
+      const decodedPayload = JSON.parse(
+        new TextDecoder().decode(payload)
+      ) as T;
+
+      return decodedPayload;
+    } catch (error) {
+      if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
+        throw new Error(`JWS signature verification failed: ${error.message}`);
+      }
+      if (error instanceof Error) {
+        throw new Error(`JWS verification error: ${error.message}`);
+      }
+      throw new Error("Unknown error during JWS verification");
+    }
+  }
+
   async getSubscriptionStatus(
     originalTransactionId: string
   ): Promise<AppleSubscriptionStatus> {

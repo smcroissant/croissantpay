@@ -61,18 +61,19 @@ export async function POST(
       );
     }
 
-    // Decode the notification (in production, verify signature with Apple's keys)
-    const parts = signedPayload.split(".");
-    if (parts.length !== 3) {
+    // Verify and decode the notification using Apple's public key from x5c certificate chain
+    let payload: AppleNotificationPayload;
+    try {
+      payload = await AppleStoreClient.verifyAndDecodeJWS<AppleNotificationPayload>(
+        signedPayload
+      );
+    } catch (error) {
+      console.error("JWS signature verification failed:", error);
       return NextResponse.json(
-        { error: "Invalid JWS format" },
-        { status: 400 }
+        { error: "Invalid webhook signature" },
+        { status: 401 }
       );
     }
-
-    const payload: AppleNotificationPayload = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString("utf-8")
-    );
 
     const { notificationType, subtype, data, notificationUUID } = payload;
 

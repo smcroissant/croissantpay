@@ -202,7 +202,7 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Enable in production
+    requireEmailVerification: true, // Enable in production
   },
   socialProviders: {
     github: {
