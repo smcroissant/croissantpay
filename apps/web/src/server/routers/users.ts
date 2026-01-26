@@ -80,7 +80,7 @@ export const usersRouter = createTRPCRouter({
       ipAddress: s.ipAddress,
       createdAt: s.createdAt,
       expiresAt: s.expiresAt,
-      isCurrent: s.id === ctx.session?.id,
+      isCurrent: s.id === ctx.session?.session.id,
     }));
   }),
 
@@ -93,7 +93,7 @@ export const usersRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Don't allow revoking current session via this method
-      if (input.sessionId === ctx.session?.id) {
+      if (input.sessionId === ctx.session?.session.id) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Cannot revoke current session. Use sign out instead.",
@@ -125,29 +125,15 @@ export const usersRouter = createTRPCRouter({
 
   // Revoke all other sessions
   revokeAllOtherSessions: protectedProcedure.mutation(async ({ ctx }) => {
-    await db
-      .delete(session)
-      .where(
-        and(
-          eq(session.userId, ctx.user.id),
-          // Keep current session
-          ctx.session?.id
-            ? eq(session.id, ctx.session.id) === false
-              ? undefined
-              : undefined
-            : undefined
-        )
-      );
-
     // Actually delete all sessions except current
-    if (ctx.session?.id) {
+    if (ctx.session?.session.id) {
       const allSessions = await db
         .select({ id: session.id })
         .from(session)
         .where(eq(session.userId, ctx.user.id));
 
       for (const s of allSessions) {
-        if (s.id !== ctx.session.id) {
+        if (s.id !== ctx.session.session.id) {
           await db.delete(session).where(eq(session.id, s.id));
         }
       }
