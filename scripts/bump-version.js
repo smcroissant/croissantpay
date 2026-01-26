@@ -23,7 +23,6 @@ const VERSION_FILE = path.join(ROOT_DIR, 'VERSION');
 const PACKAGE_FILES = [
   'package.json',
   'apps/web/package.json',
-  'packages/react-native-crp/package.json',
 ];
 
 function readVersion() {

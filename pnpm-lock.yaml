@@ -160,27 +160,6 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  packages/react-native-crp:
-    devDependencies:
-      '@types/react':
-        specifier: ^18.2.0
-        version: 18.3.27
-      '@types/react-native':
-        specifier: ^0.73.0
-        version: 0.73.0(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(react@18.3.1)
-      react:
-        specifier: ^18.2.0
-        version: 18.3.1
-      react-native:
-        specifier: ^0.73.0
-        version: 0.73.11(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(react@18.3.1)
-      react-native-builder-bob:
-        specifier: ^0.23.0
-        version: 0.23.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
 packages:
 
   '@alloc/quick-lru@5.2.0':
