@@ -118,7 +118,7 @@ export default async function BlogPostPage({
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground mr-2">Share:</span>
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://croissantpay.dev/blog/${post.slug}`)}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://croissantlabs.com/blog/${post.slug}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
@@ -126,7 +126,7 @@ export default async function BlogPostPage({
               <Twitter className="w-4 h-4" />
             </a>
             <a
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://croissantpay.dev/blog/${post.slug}`)}`}
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://croissantlabs.com/blog/${post.slug}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"

@@ -236,7 +236,7 @@ For Kubernetes, use our Helm chart:
 
 \`\`\`bash
 # Add the CroissantPay Helm repository
-helm repo add croissantpay https://charts.croissantpay.dev
+helm repo add croissantpay https://charts.croissantlabs.com
 helm repo update
 
 # Install CroissantPay
@@ -399,7 +399,7 @@ LIMIT 10;
 
 ## Getting Help
 
-- Documentation: https://docs.croissantpay.dev/self-hosted
+- Documentation: https://docs.croissantlabs.com/self-hosted
 - GitHub Issues: https://github.com/croissantpay/croissantpay/issues
 - Discord: https://discord.gg/croissantpay
 
@@ -509,7 +509,7 @@ We're building CroissantPay in the open and welcome contributions:
 
 - ⭐ Star us on [GitHub](https://github.com/croissantpay/croissantpay)
 - 💬 Join our [Discord](https://discord.gg/croissantpay)
-- 📖 Read the [Documentation](https://docs.croissantpay.dev)
+- 📖 Read the [Documentation](https://docs.croissantlabs.com)
 - 🐛 Report [Issues](https://github.com/croissantpay/croissantpay/issues)
 
 ## What's Next

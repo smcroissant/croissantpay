@@ -197,8 +197,8 @@ export default function ContactPage() {
                   icon={Mail}
                   title="Email"
                   description="For general inquiries"
-                  link="mailto:hello@croissantpay.dev"
-                  linkText="hello@croissantpay.dev"
+                  link="mailto:hello@croissantlabs.com"
+                  linkText="hello@croissantlabs.com"
                 />
                 <ContactMethod
                   icon={Github}
@@ -224,7 +224,7 @@ export default function ContactPage() {
                 Let's discuss how we can help your organization.
               </p>
               <Link
-                href="mailto:enterprise@croissantpay.dev"
+                href="mailto:enterprise@croissantlabs.com"
                 className="text-primary text-sm font-medium hover:underline"
               >
                 Contact Enterprise Sales →

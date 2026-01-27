@@ -95,7 +95,7 @@ export default function ApiReferencePage() {
             <CodeBlock
               title="Example Request"
               language="bash"
-              code={`curl -X GET "https://api.croissantpay.dev/v1/subscribers/user_123" \\
+              code={`curl -X GET "https://api.croissantlabs.com/v1/subscribers/user_123" \\
   -H "X-API-Key: mx_live_your_api_key" \\
   -H "Content-Type: application/json"`}
             />
@@ -113,7 +113,7 @@ export default function ApiReferencePage() {
             <div className="p-4 rounded-xl bg-card border border-border">
               <p className="font-mono text-sm">
                 <span className="text-muted-foreground">Cloud:</span>{" "}
-                <code className="text-primary">https://api.croissantpay.dev/v1</code>
+                <code className="text-primary">https://api.croissantlabs.com/v1</code>
               </p>
               <p className="font-mono text-sm mt-2">
                 <span className="text-muted-foreground">Self-hosted:</span>{" "}

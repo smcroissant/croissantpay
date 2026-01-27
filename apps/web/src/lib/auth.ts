@@ -58,7 +58,7 @@ function getPlugins() {
     passkey({
       rpID: process.env.PASSKEY_RP_ID || "localhost",
       rpName: "CroissantPay",
-      origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      origin: process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com",
     })
   );
   
@@ -76,7 +76,7 @@ function getPlugins() {
       invitationExpiresIn: 60 * 60 * 24 * 7,
       // Send invitation email
       sendInvitationEmail: async (data) => {
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${data.id}`;
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com"}/invite/${data.id}`;
         await sendRawEmail({
           to: data.email,
           subject: `You've been invited to join ${data.organization.name}`,
@@ -223,7 +223,7 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [
-    process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    process.env.BETTER_AUTH_URL || "https://croissantlabs.com",
   ],
   plugins: getPlugins(),
 });

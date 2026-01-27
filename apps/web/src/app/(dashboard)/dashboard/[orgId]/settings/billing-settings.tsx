@@ -24,7 +24,7 @@ export function BillingSettings({ orgId }: { orgId: string }) {
   // Use Better Auth's subscription.upgrade for checkouts
   const handleUpgradePlan = async (planId: string) => {
     if (planId === "enterprise") {
-      window.open("mailto:sales@croissantpay.dev?subject=Enterprise%20Plan%20Inquiry", "_blank");
+      window.open("mailto:sales@croissantlabs.com?subject=Enterprise%20Plan%20Inquiry", "_blank");
       return;
     }
 

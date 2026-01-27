@@ -17,7 +17,7 @@
 | **Support** | Priority available | Community |
 | **Data** | Our servers | Your servers |
 
-**[Start with Cloud →](https://croissantpay.dev)** or **[Self-Host →](#self-hosting)**
+**[Start with Cloud →](https://croissantlabs.com)** or **[Self-Host →](#self-hosting)**
 
 ## ✨ Features
 
@@ -126,7 +126,7 @@ pnpm db:push
 pnpm db:seed
 ```
 
-This creates a demo user (demo@croissantpay.dev / demo123) with sample products, subscribers, and subscriptions.
+This creates a demo user (demo@croissantlabs.com / demo123) with sample products, subscribers, and subscriptions.
 
 ### 5. Start development server
 
@@ -192,9 +192,9 @@ function App() {
     <CroissantPayProvider
       config={{
         apiKey: 'mx_public_your_key',
-        // For cloud: https://api.croissantpay.dev
+        // For cloud: https://api.croissantlabs.com
         // For self-hosted: your server URL
-        apiUrl: 'https://api.croissantpay.dev',
+        apiUrl: 'https://api.croissantlabs.com',
         appUserId: 'user_123',
       }}
     >

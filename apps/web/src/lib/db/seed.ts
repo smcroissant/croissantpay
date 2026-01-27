@@ -48,7 +48,7 @@ export async function seed() {
   await db.insert(user).values({
     id: demoUserId,
     name: "Demo User",
-    email: "demo@croissantpay.dev",
+    email: "demo@croissantlabs.com",
     emailVerified: true,
   });
 
@@ -342,7 +342,7 @@ export async function seed() {
   // 10. Summary
   console.log("\n✅ Seed completed!\n");
   console.log("📊 Summary:");
-  console.log(`   - 1 Demo User (demo@croissantpay.dev / demo123)`);
+  console.log(`   - 1 Demo User (demo@croissantlabs.com / demo123)`);
   console.log(`   - 1 Organization`);
   console.log(`   - 1 App with API keys`);
   console.log(`   - 2 Entitlements (pro, premium)`);

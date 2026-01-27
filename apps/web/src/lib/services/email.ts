@@ -218,7 +218,7 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_FROM || "CroissantPay <noreply@croissantpay.dev>",
+      from: process.env.EMAIL_FROM || "CroissantPay <noreply@croissantlabs.com>",
       to: emailData.to,
       subject: template.subject,
       text: template.text(emailData.data),
@@ -252,7 +252,7 @@ export async function sendRawEmail(emailData: RawEmailData): Promise<boolean> {
       : { text: emailData.text || "" };
 
     await resend.emails.send({
-      from: process.env.EMAIL_FROM || "CroissantPay <noreply@croissantpay.dev>",
+      from: process.env.EMAIL_FROM || "CroissantPay <noreply@croissantlabs.com>",
       to: emailData.to,
       subject: emailData.subject,
       ...emailContent,

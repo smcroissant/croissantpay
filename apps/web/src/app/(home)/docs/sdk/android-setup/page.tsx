@@ -169,7 +169,7 @@ export default function AndroidSetupPage() {
               <div className="ml-6 mt-2">
                 <p className="text-sm mb-2">Endpoint URL:</p>
                 <code className="block p-3 rounded-lg bg-secondary text-sm">
-                  https://api.croissantpay.dev/api/webhooks/google
+                  https://api.croissantlabs.com/api/webhooks/google
                 </code>
               </div>
             </li>

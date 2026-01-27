@@ -134,7 +134,7 @@ export default async function Image() {
             color: "#6366f1",
           }}
         >
-          croissantpay.dev
+          croissantlabs.com
         </div>
       </div>
     ),

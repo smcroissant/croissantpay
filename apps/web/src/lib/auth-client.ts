@@ -4,7 +4,7 @@ import { organizationClient, twoFactorClient, lastLoginMethodClient } from "bett
 import { passkeyClient } from "@better-auth/passkey/client";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com",
   plugins: [
     // Organization plugin
     // See: https://www.better-auth.com/docs/plugins/organization

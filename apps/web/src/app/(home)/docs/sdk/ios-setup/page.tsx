@@ -166,7 +166,7 @@ export default function IosSetupPage() {
               <span className="text-foreground font-medium">Enter your webhook URL</span>
               <div className="ml-6 mt-2">
                 <code className="block p-3 rounded-lg bg-secondary text-sm">
-                  https://api.croissantpay.dev/api/webhooks/apple
+                  https://api.croissantlabs.com/api/webhooks/apple
                 </code>
                 <p className="text-sm text-muted-foreground mt-2">
                   For self-hosted: <code className="px-1 py-0.5 rounded bg-secondary">https://your-domain.com/api/webhooks/apple</code>

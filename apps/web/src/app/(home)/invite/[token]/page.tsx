@@ -99,7 +99,7 @@ export default function AcceptInvitePage() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           Need help?{" "}
           <a
-            href="mailto:support@croissantpay.dev"
+            href="mailto:support@croissantlabs.com"
             className="text-primary hover:underline"
           >
             Contact Support

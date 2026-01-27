@@ -94,7 +94,7 @@ export default function App() {
     <CroissantPayProvider
       config={{
         apiKey: 'mx_public_your_key', // From CroissantPay dashboard
-        apiUrl: 'https://api.croissantpay.dev', // Or your self-hosted URL
+        apiUrl: 'https://api.croissantlabs.com', // Or your self-hosted URL
         appUserId: user?.id, // Your user's ID
         debugLogs: __DEV__, // Enable logs in development
       }}
@@ -189,7 +189,7 @@ export function PaywallScreen() {
                     <td className="px-4 py-2 font-mono text-primary">apiUrl</td>
                     <td className="px-4 py-2 text-muted-foreground">string</td>
                     <td className="px-4 py-2">
-                      API URL (defaults to https://api.croissantpay.dev)
+                      API URL (defaults to https://api.croissantlabs.com)
                     </td>
                   </tr>
                   <tr>

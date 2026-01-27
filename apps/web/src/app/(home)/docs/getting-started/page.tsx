@@ -183,7 +183,7 @@ function App() {
     <CroissantPayProvider 
       apiKey="mx_public_your_key_here"
       userId={currentUser.id} // Your app's user ID
-      apiUrl="https://api.croissantpay.dev" // Or your self-hosted URL
+      apiUrl="https://api.croissantlabs.com" // Or your self-hosted URL
     >
       <YourApp />
     </CroissantPayProvider>

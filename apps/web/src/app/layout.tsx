@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://croissantpay.dev";
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com";
 
 export const metadata: Metadata = {
   title: {
