@@ -3,18 +3,42 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint } from "lucide-react";
 import { signIn, authClient } from "@/lib/auth-client";
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional().default(true),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [lastMethod, setLastMethod] = useState<string | null>(null);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const resetSuccess = searchParams.get("reset") === "success";
+
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: true,
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
 
   // Get last used login method on mount
   useEffect(() => {
@@ -36,29 +60,24 @@ function LoginForm() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: LoginFormData) => {
     setError("");
-    setLoading(true);
-
     try {
       const result = await signIn.email({
-        email,
-        password,
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe,
       });
 
       if (result.error) {
         setError(result.error.message || "Login failed");
       } else if (result.data && "twoFactorRedirect" in result.data && result.data.twoFactorRedirect) {
-        // User has 2FA enabled, redirect to verification page
         router.push("/login/verify-2fa");
       } else {
         router.push("/dashboard");
       }
     } catch (err) {
       setError("An unexpected error occurred");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -75,7 +94,7 @@ function LoginForm() {
 
   const handlePasskeySignIn = async () => {
     setError("");
-    setLoading(true);
+    setPasskeyLoading(true);
 
     try {
       const result = await authClient.signIn.passkey?.();
@@ -88,7 +107,7 @@ function LoginForm() {
     } catch (err) {
       setError("Passkey sign in failed");
     } finally {
-      setLoading(false);
+      setPasskeyLoading(false);
     }
   };
 
@@ -119,7 +138,7 @@ function LoginForm() {
           {/* Passkey Sign In */}
           <button
             onClick={handlePasskeySignIn}
-            disabled={loading}
+            disabled={isSubmitting || passkeyLoading}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl mb-4 transition-colors ${
               lastMethod === "passkey"
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -188,7 +207,7 @@ function LoginForm() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {resetSuccess && (
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm">
                 Your password has been reset. You can sign in with your new password.
@@ -208,15 +227,18 @@ function LoginForm() {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
+                  {...register("email")}
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="username webauthn"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                  required
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border focus:ring-1 focus:ring-primary outline-none transition-colors ${
+                    errors.email ? "border-red-500" : "border-border focus:border-primary"
+                  }`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+              )}
             </div>
 
             <div>
@@ -224,20 +246,24 @@ function LoginForm() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
+                  {...register("password")}
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="current-password webauthn"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                  required
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border focus:ring-1 focus:ring-primary outline-none transition-colors ${
+                    errors.password ? "border-red-500" : "border-border focus:border-primary"
+                  }`}
                 />
               </div>
+              {errors.password && (
+                <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
+                  {...register("rememberMe")}
                   type="checkbox"
                   className="w-4 h-4 rounded border-border bg-secondary"
                 />
@@ -253,14 +279,14 @@ function LoginForm() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 lastMethod === "email"
                   ? "bg-primary text-primary-foreground hover:bg-primary/90 glow-primary"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
               }`}
             >
-              {loading ? (
+              {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>

@@ -3,18 +3,41 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Smartphone, Mail, Lock, User, ArrowRight, Github, CheckCircle2 } from "lucide-react";
 import { signUp, signIn, authClient } from "@/lib/auth-client";
 
+const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  password: z.string().min(8, "Must be at least 8 characters"),
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [lastMethod, setLastMethod] = useState<string | null>(null);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+
+  const form = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    getValues,
+  } = form;
 
   // Get last used login method on mount
   useEffect(() => {
@@ -22,25 +45,20 @@ export default function RegisterPage() {
     setLastMethod(method || null);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: RegisterFormData) => {
     setError("");
-    setLoading(true);
-
     try {
       const result = await signUp.email({
-        email,
-        password,
-        name,
+        email: data.email,
+        password: data.password,
+        name: data.name,
       });
 
       if (result.error) {
         setError(result.error.message || "Registration failed");
       } else if (process.env.NODE_ENV === "development") {
-        // Local: no email verification, redirect straight to dashboard
         router.push("/dashboard");
       } else {
-        // Production: email verification required, show check-your-email message
         setShowVerificationMessage(true);
       }
     } catch (err) {
@@ -49,8 +67,6 @@ export default function RegisterPage() {
       if (process.env.NODE_ENV === "development" && err instanceof Error) {
         console.error("[Register]", err);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -146,7 +162,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {showVerificationMessage ? (
               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-primary">
                 <div className="flex items-start gap-3">
@@ -154,7 +170,7 @@ export default function RegisterPage() {
                   <div className="flex-1">
                     <p className="font-semibold mb-1">Check your email</p>
                     <p className="text-sm text-primary/90">
-                      We've sent a verification link to <strong>{email}</strong>. Please click the link in the email to verify your account and complete your registration.
+                      We've sent a verification link to <strong>{getValues("email")}</strong>. Please click the link in the email to verify your account and complete your registration.
                     </p>
                     <p className="text-xs text-primary/70 mt-2">
                       Didn't receive the email? Check your spam folder or{" "}
@@ -180,62 +196,70 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                  required
-                />
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      {...register("name")}
+                      type="text"
+                      placeholder="John Doe"
+                      className={`w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border focus:ring-1 focus:ring-primary outline-none transition-colors ${
+                        errors.name ? "border-red-500" : "border-border focus:border-primary"
+                      }`}
+                    />
+                  </div>
+                  {errors.name && (
+                    <p className="text-red-400 text-sm mt-1">{errors.name.message}</p>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Email
-                  {lastMethod === "email" && <LastUsedBadge />}
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                    required
-                  />
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Email
+                    {lastMethod === "email" && <LastUsedBadge />}
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      {...register("email")}
+                      type="email"
+                      placeholder="you@example.com"
+                      className={`w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border focus:ring-1 focus:ring-primary outline-none transition-colors ${
+                        errors.email ? "border-red-500" : "border-border focus:border-primary"
+                      }`}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                    required
-                    minLength={8}
-                  />
+                <div>
+                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      {...register("password")}
+                      type="password"
+                      placeholder="••••••••"
+                      className={`w-full pl-11 pr-4 py-3 rounded-xl bg-secondary border focus:ring-1 focus:ring-primary outline-none transition-colors ${
+                        errors.password ? "border-red-500" : "border-border focus:border-primary"
+                      }`}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Must be at least 8 characters
+                  </p>
+                  {errors.password && (
+                    <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Must be at least 8 characters
-                </p>
-              </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed glow-primary"
                 >
-                  {loading ? (
+                  {isSubmitting ? (
                     <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   ) : (
                     <>
