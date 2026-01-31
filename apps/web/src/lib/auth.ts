@@ -202,7 +202,8 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true, // Enable in production
+    // In local/dev, skip email verification so sign-up works without sending emails
+    requireEmailVerification: process.env.NODE_ENV === "production",
   },
   socialProviders: {
     github: {

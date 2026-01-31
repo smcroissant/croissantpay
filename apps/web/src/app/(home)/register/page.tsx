@@ -36,13 +36,19 @@ export default function RegisterPage() {
 
       if (result.error) {
         setError(result.error.message || "Registration failed");
+      } else if (process.env.NODE_ENV === "development") {
+        // Local: no email verification, redirect straight to dashboard
+        router.push("/dashboard");
       } else {
-        // Show verification message instead of redirecting immediately
-        // Better-Auth will require email verification before full access
+        // Production: email verification required, show check-your-email message
         setShowVerificationMessage(true);
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
+      if (process.env.NODE_ENV === "development" && err instanceof Error) {
+        console.error("[Register]", err);
+      }
     } finally {
       setLoading(false);
     }

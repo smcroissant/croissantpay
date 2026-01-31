@@ -3,8 +3,14 @@ import { stripeClient } from "@better-auth/stripe/client";
 import { organizationClient, twoFactorClient, lastLoginMethodClient } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
 
+// Use same-origin in browser so dev works without NEXT_PUBLIC_APP_URL; env for SSR/build.
+function getBaseURL() {
+  if (typeof window !== "undefined") return window.location.origin;
+  return process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com";
+}
+
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com",
+  baseURL: getBaseURL(),
   plugins: [
     // Organization plugin
     // See: https://www.better-auth.com/docs/plugins/organization
