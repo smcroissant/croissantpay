@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint } from "lucide-react";
 import { signIn, authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [lastMethod, setLastMethod] = useState<string | null>(null);
+  const resetSuccess = searchParams.get("reset") === "success";
 
   // Get last used login method on mount
   useEffect(() => {
@@ -187,6 +189,11 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {resetSuccess && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm">
+                Your password has been reset. You can sign in with your new password.
+              </div>
+            )}
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                 {error}

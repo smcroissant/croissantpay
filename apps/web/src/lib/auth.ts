@@ -204,6 +204,20 @@ export const auth = betterAuth({
     enabled: true,
     // In local/dev, skip email verification so sign-up works without sending emails
     requireEmailVerification: process.env.NODE_ENV === "production",
+    sendResetPassword: async ({ user, url }) => {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com";
+      await sendRawEmail({
+        to: user.email,
+        subject: "Reset your CroissantPay password",
+        html: `
+          <h2>Reset your password</h2>
+          <p>You requested a password reset for your CroissantPay account.</p>
+          <p>Click the link below to set a new password:</p>
+          <a href="${url}" style="display: inline-block; padding: 12px 24px; background: #6366f1; color: white; text-decoration: none; border-radius: 8px;">Reset password</a>
+          <p style="margin-top: 20px; color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+        `,
+      });
+    },
   },
   socialProviders: {
     github: {
