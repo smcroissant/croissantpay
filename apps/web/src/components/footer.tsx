@@ -14,7 +14,7 @@ export function Footer() {
               <span className="font-bold text-lg">CroissantPay</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Open-source in-app purchase management for React Native.
+              In-app purchase management for React Native. Open source coming soon.
             </p>
           </div>
           <div>
@@ -70,7 +70,7 @@ export function Footer() {
         </div>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-border">
           <p className="text-muted-foreground text-sm">
-            © 2026 CroissantPay. Open source under MIT License.
+            © 2026 CroissantPay. Open source coming soon.
           </p>
           <div className="flex items-center gap-4">
             <Link href="https://github.com/croissantpay/croissantpay" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">

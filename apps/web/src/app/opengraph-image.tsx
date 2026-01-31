@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "CroissantPay - Open-source IAP management for React Native";
+export const alt = "CroissantPay - IAP management for React Native (open source coming soon)";
 export const size = {
   width: 1200,
   height: 630,
@@ -82,7 +82,7 @@ export default async function Image() {
             lineHeight: 1.4,
           }}
         >
-          Open-source in-app purchase management for React Native
+          In-app purchase management for React Native (open source coming soon)
         </div>
 
         {/* Features */}

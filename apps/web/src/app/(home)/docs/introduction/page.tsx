@@ -48,7 +48,7 @@ export default function IntroductionPage() {
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-4">Introduction to CroissantPay</h1>
         <p className="text-xl text-muted-foreground mb-12">
-          Open-source in-app purchase infrastructure for React Native
+          In-app purchase infrastructure for React Native (open source coming soon)
         </p>
 
         {/* What is CroissantPay */}
@@ -96,8 +96,8 @@ export default function IntroductionPage() {
             />
             <FeatureCard
               icon={<Users className="w-6 h-6" />}
-              title="Open Source"
-              description="MIT licensed. Inspect the code, contribute, or fork for your needs."
+              title="Open Source (coming soon)"
+              description="We're going open source under MIT. Soon: inspect the code, contribute, or fork for your needs."
             />
           </div>
         </section>

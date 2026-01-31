@@ -408,14 +408,16 @@ Happy self-hosting! 🚀
   },
   {
     slug: "announcing-croissantpay",
-    title: "Announcing CroissantPay: Open-Source IAP Management",
-    excerpt: "We're excited to announce CroissantPay, an open-source platform for in-app purchases. Learn about our mission and what makes us different.",
+    title: "Announcing CroissantPay: IAP Management (Open Source Coming Soon)",
+    excerpt: "We're excited to announce CroissantPay, a platform for in-app purchases. Open source is coming—learn about our mission and what makes us different.",
     date: "December 1, 2025",
     readTime: "6 min read",
     author: "CroissantPay Team",
     category: "Announcement",
     content: `
-Today, we're thrilled to publicly announce CroissantPay—an open-source platform for managing in-app purchases and subscriptions in React Native apps.
+> **Note:** We're still working on the open-source release. The code will be published under MIT when it's ready. For now, CroissantPay Cloud is available.
+
+Today, we're thrilled to publicly announce CroissantPay—a platform for managing in-app purchases and subscriptions in React Native apps. We're going open source; it's coming soon.
 
 ## Why We Built CroissantPay
 
@@ -442,14 +444,16 @@ CroissantPay is a complete solution for managing subscriptions and in-app purcha
 - **Real-time webhooks** - Never miss a subscription event
 - **Offerings management** - Organize products for your paywalls
 
-## Open Source at Heart
+## Open Source Coming Soon
 
-CroissantPay is fully open source under the MIT license. This means:
+We're working on making CroissantPay fully open source under the MIT license. When we launch, this will mean:
 
 - **Inspect the code** - See exactly how everything works
 - **Self-host for free** - Run on your own infrastructure with no limits
 - **Contribute** - Help shape the future of the project
 - **No vendor lock-in** - Your data, your control
+
+In the meantime, CroissantPay Cloud is available and we're building in the open.
 
 ## Cloud or Self-Hosted
 
@@ -523,7 +527,7 @@ This is just the beginning. Our roadmap includes:
 
 ## Thank You
 
-We're grateful to everyone who helped make this launch possible—our early adopters, beta testers, and the open-source community.
+We're grateful to everyone who helped make this launch possible—our early adopters, beta testers, and everyone excited for our open-source release.
 
 Ready to take control of your in-app purchases? [Get started today](/register).
 

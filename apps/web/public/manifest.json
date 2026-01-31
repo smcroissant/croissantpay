@@ -1,7 +1,7 @@
 {
   "name": "CroissantPay",
   "short_name": "CroissantPay",
-  "description": "Open-source in-app purchase management for React Native",
+  "description": "In-app purchase management for React Native. Open source coming soon.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

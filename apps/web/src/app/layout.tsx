@@ -17,17 +17,17 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://croissantlabs.com";
 
 export const metadata: Metadata = {
   title: {
-    default: "CroissantPay - Open-Source IAP Management for React Native",
+    default: "CroissantPay - IAP Management for React Native (open source coming soon)",
     template: "%s | CroissantPay",
   },
   description:
-    "Open-source in-app purchase and subscription management for React Native. Self-host for free or use our managed cloud. No revenue share.",
+    "In-app purchase and subscription management for React Native. Open source coming soon. Self-host for free or use our managed cloud. No revenue share.",
   keywords: [
     "in-app purchases",
     "subscriptions",
     "React Native",
     "RevenueCat alternative",
-    "open source",
+    "open source coming soon",
     "IAP",
     "mobile payments",
     "StoreKit",
@@ -41,23 +41,23 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "CroissantPay",
-    title: "CroissantPay - Open-Source IAP Management",
+    title: "CroissantPay - IAP Management (open source coming soon)",
     description:
-      "Open-source in-app purchase management for React Native. Self-host for free or use our managed cloud. No revenue share ever.",
+      "In-app purchase management for React Native. Open source coming soon. Self-host for free or use our managed cloud. No revenue share ever.",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "CroissantPay - Open-source IAP management for React Native",
+        alt: "CroissantPay - IAP management for React Native (open source coming soon)",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CroissantPay - Open-Source IAP Management",
+    title: "CroissantPay - IAP Management (open source coming soon)",
     description:
-      "Open-source in-app purchase management for React Native. Self-host for free or use our managed cloud.",
+      "In-app purchase management for React Native. Open source coming soon. Self-host for free or use our managed cloud.",
     creator: "@croissantpay",
     images: ["/opengraph-image"],
   },

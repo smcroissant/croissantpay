@@ -243,7 +243,7 @@ export default async function PricingPage() {
               Run on Your Own Infrastructure
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              100% open source, unlimited everything, forever free.
+              Open source coming soon — unlimited everything, forever free when we launch.
               Your data never leaves your servers.
             </p>
           </div>
@@ -366,7 +366,7 @@ export default async function PricingPage() {
             />
             <FAQ
               question="Is the self-hosted version really free?"
-              answer="Yes, 100% free and open source under the MIT license. You can use it commercially, modify it, and even sell services built on top of it."
+              answer="We're working on it! The self-hosted version will be free and open source under the MIT license when we launch. You'll be able to use it commercially, modify it, and even sell services built on top of it. For now, use CroissantPay Cloud."
             />
             <FAQ
               question="Do you offer annual billing discounts?"

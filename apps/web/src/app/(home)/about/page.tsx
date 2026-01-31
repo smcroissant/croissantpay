@@ -53,8 +53,8 @@ export default function AboutPage() {
             <div>
               <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
               <p className="text-muted-foreground mb-4">
-                We're building the open-source alternative to expensive, proprietary 
-                payment management solutions. Our goal is simple: make it easy for 
+                We're building the alternative to expensive, proprietary 
+                payment management solutions. Open source coming soon. Our goal is simple: make it easy for 
                 developers to monetize their apps without giving up control or 
                 breaking the bank.
               </p>
@@ -64,7 +64,7 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <ValueCard icon={Heart} title="Open Source" description="MIT licensed, forever free to self-host" />
+              <ValueCard icon={Heart} title="Open Source (coming soon)" description="We're going open source — MIT licensed, forever free to self-host" />
               <ValueCard icon={Shield} title="Privacy First" description="Your data stays yours" />
               <ValueCard icon={Zap} title="Developer Focus" description="Built by developers, for developers" />
               <ValueCard icon={Globe} title="Global" description="Works anywhere, for anyone" />
@@ -124,18 +124,20 @@ export default function AboutPage() {
       <section className="py-20 px-6 bg-card/50 border-t border-border">
         <div className="max-w-4xl mx-auto text-center">
           <Code className="w-12 h-12 text-primary mx-auto mb-6" />
-          <h2 className="text-3xl font-bold mb-4">Open Source at Heart</h2>
+          <h2 className="text-3xl font-bold mb-4">Open Source Coming Soon</h2>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            CroissantPay is fully open source under the MIT license. Inspect the code, 
-            contribute improvements, or fork it for your own needs. We believe open 
-            source makes better software.
+            We're working on making CroissantPay fully open source under the MIT license. 
+            Soon you'll be able to inspect the code, contribute improvements, or fork it 
+            for your own needs. We believe open source makes better software.
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            In the meantime, you can use CroissantPay Cloud or get in touch if you're interested in early access to self-hosting.
           </p>
           <Link
-            href="https://github.com/croissantpay/croissantpay"
+            href="/contact"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            <Github className="w-5 h-5" />
-            View on GitHub
+            Get notified when we go open source
           </Link>
         </div>
       </section>
