@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "2mb",
     },
-    instrumentationHook: true, // Enable instrumentation for env validation
   },
 };
 
