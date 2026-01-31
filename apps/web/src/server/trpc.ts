@@ -4,7 +4,8 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { app, organization, organizationMember } from "@/lib/db/schema";
+import { app } from "@/lib/db/schema";
+import { getOrCreateUserOrganizations } from "@/lib/organizations";
 import { eq, and } from "drizzle-orm";
 
 /**
@@ -70,52 +71,11 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  // Get user's organizations using database query
-  const memberships = await db
-    .select({
-      organization,
-      role: organizationMember.role,
-    })
-    .from(organizationMember)
-    .innerJoin(organization, eq(organizationMember.organizationId, organization.id))
-    .where(eq(organizationMember.userId, ctx.session.user.id));
-
-  let organizations = memberships.map((m) => ({
-    ...m.organization,
-    role: m.role,
-  }));
-
-  if (organizations.length === 0) {
-    // Auto-create a default organization for the user
-    const userSlug =
-      ctx.session.user.email?.split("@")[0] ||
-      `user-${ctx.session.user.id.slice(0, 8)}`;
-    
-    const orgId = crypto.randomUUID();
-    const now = new Date();
-    
-    // Insert organization
-    const [newOrg] = await db
-      .insert(organization)
-      .values({
-        id: orgId,
-        name: `${ctx.session.user.name || userSlug}'s Organization`,
-        slug: userSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-
-    // Add user as owner
-    await db.insert(organizationMember).values({
-      organizationId: orgId,
-      userId: ctx.session.user.id,
-      role: "owner",
-      createdAt: now,
-    });
-
-    organizations = [{ ...newOrg, role: "owner" as const }];
-  }
+  const organizations = await getOrCreateUserOrganizations(
+    ctx.session.user.id,
+    ctx.session.user.email,
+    ctx.session.user.name
+  );
 
   // Use selected organization from cookie, or default to first one
   let selectedOrg = organizations[0];
