@@ -184,6 +184,7 @@ function LoginForm() {
 
           {/* Passkey Sign In */}
           <button
+            type="button"
             onClick={handlePasskeySignIn}
             disabled={isSubmitting || passkeyLoading}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl mb-4 transition-colors ${
@@ -200,6 +201,7 @@ function LoginForm() {
           {/* OAuth Buttons */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <button
+              type="button"
               onClick={() => handleOAuthSignIn("github")}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
                 lastMethod === "github"
@@ -212,6 +214,7 @@ function LoginForm() {
               {lastMethod === "github" && <LastUsedBadge />}
             </button>
             <button
+              type="button"
               onClick={() => handleOAuthSignIn("google")}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-colors ${
                 lastMethod === "google"
