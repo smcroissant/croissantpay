@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
-import { marketingUrl } from "@/lib/config";
 
 export default function OrgDashboardPage() {
   const params = useParams();
@@ -86,12 +85,12 @@ export default function OrgDashboardPage() {
               >
                 <AlertCircle className="w-5 h-5 shrink-0" />
                 <p className="flex-1 text-sm">{message}</p>
-                <a
-                  href={`${marketingUrl()}/pricing`}
+                <Link
+                  href="/pricing"
                   className="text-sm font-medium hover:underline"
                 >
                   Upgrade
-                </a>
+                </Link>
               </div>
             );
           })}
@@ -164,12 +163,12 @@ export default function OrgDashboardPage() {
                 Create Your First App
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <a
-                href={`${marketingUrl()}/docs/getting-started`}
+              <Link
+                href="/docs/getting-started"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 Read the Docs
-              </a>
+              </Link>
             </div>
           </div>
         </div>

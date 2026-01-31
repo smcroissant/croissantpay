@@ -5,7 +5,6 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { marketingUrl } from "@/lib/config";
 
 export function IntegrateSDKStep({ 
   copyToClipboard, 
@@ -103,7 +102,7 @@ function SubscriptionScreen() {
       </div>
 
       <a
-        href={`${marketingUrl()}/docs/sdk/react-native`}
+        href="/docs/sdk/react-native"
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"

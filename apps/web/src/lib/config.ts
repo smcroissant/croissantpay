@@ -174,7 +174,3 @@ export function formatLimit(value: number): string {
   return value.toString();
 }
 
-/** Base URL of the marketing site (docs, pricing, etc.). Used when app and marketing are split. */
-export function marketingUrl(): string {
-  return process.env.NEXT_PUBLIC_MARKETING_URL || "https://croissantpay.com";
-}

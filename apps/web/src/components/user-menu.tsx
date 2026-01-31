@@ -13,7 +13,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { marketingUrl } from "@/lib/config";
 
 interface UserMenuProps {
   user: {
@@ -131,14 +130,14 @@ export function UserMenu({ user, orgId }: UserMenuProps) {
               </Link>
             )}
 
-            <a
-              href={`${marketingUrl()}/docs`}
+            <Link
+              href="/docs"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
             >
               <HelpCircle className="w-4 h-4 text-muted-foreground" />
               <span>Documentation</span>
-            </a>
+            </Link>
           </div>
 
           {/* Logout */}
