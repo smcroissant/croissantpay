@@ -6,8 +6,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint } from "lucide-react";
+import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint, Send } from "lucide-react";
 import { signIn, authClient } from "@/lib/auth-client";
+
+function isEmailVerificationError(error: { message?: string; status?: number } | null): boolean {
+  if (!error?.message) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    error.status === 403 ||
+    msg.includes("verify") ||
+    msg.includes("verification") ||
+    msg.includes("email not verified")
+  );
+}
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -27,6 +38,9 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [lastMethod, setLastMethod] = useState<string | null>(null);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const resetSuccess = searchParams.get("reset") === "success";
 
   const form = useForm<LoginFormData>({
@@ -66,6 +80,8 @@ function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError("");
+    setUnverifiedEmail(null);
+    setResendSuccess(false);
     try {
       const result = await signIn.email({
         email: data.email,
@@ -75,6 +91,9 @@ function LoginForm() {
 
       if (result.error) {
         setError(result.error.message || "Login failed");
+        if (isEmailVerificationError(result.error)) {
+          setUnverifiedEmail(data.email);
+        }
       } else if (result.data && "twoFactorRedirect" in result.data && result.data.twoFactorRedirect) {
         router.push("/login/verify-2fa");
       } else {
@@ -82,6 +101,30 @@ function LoginForm() {
       }
     } catch (err) {
       setError("An unexpected error occurred");
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const email = unverifiedEmail ?? form.getValues("email");
+    if (!email) return;
+    setResendSuccess(false);
+    setResendLoading(true);
+    try {
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const result = await authClient.sendVerificationEmail({
+        email,
+        callbackURL: `${baseUrl}/dashboard`,
+      });
+      if (result?.error) {
+        setError(result.error.message || "Failed to resend verification email");
+      } else {
+        setResendSuccess(true);
+        setError("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification email");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -217,9 +260,29 @@ function LoginForm() {
                 Your password has been reset. You can sign in with your new password.
               </div>
             )}
+            {resendSuccess && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm">
+                Verification email sent. Check your inbox and click the link to verify your account.
+              </div>
+            )}
             {error && (
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                {error}
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm space-y-3">
+                <p>{error}</p>
+                {unverifiedEmail && (
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resendLoading ? (
+                      <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    {resendLoading ? "Sending…" : "Resend verification email"}
+                  </button>
+                )}
               </div>
             )}
 
