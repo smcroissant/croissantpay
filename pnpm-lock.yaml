@@ -87,7 +87,7 @@ importers:
         specifier: ^144.0.0
         version: 144.0.0
       ioredis:
-        specifier: ^5.4.1
+        specifier: ^5.9.2
         version: 5.9.2
       jose:
         specifier: ^6.1.3
