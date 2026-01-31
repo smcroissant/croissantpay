@@ -1,12 +1,10 @@
-// Deployment mode configuration
-export type DeploymentMode = "self-hosted" | "cloud";
-
+// Display-only config for marketing site (pricing, plans)
 export interface PlanFeatures {
   maxApps: number;
   maxSubscribers: number;
-  maxApiRequests: number; // per month
-  webhookRetention: number; // days
-  analyticsRetention: number; // days
+  maxApiRequests: number;
+  webhookRetention: number;
+  analyticsRetention: number;
   teamMembers: number;
   prioritySupport: boolean;
   customBranding: boolean;
@@ -18,8 +16,8 @@ export interface Plan {
   id: string;
   name: string;
   description: string;
-  price: number; // monthly in cents, 0 = free
-  yearlyPrice: number; // yearly in cents (with discount)
+  price: number;
+  yearlyPrice: number;
   features: PlanFeatures;
   popular?: boolean;
 }
@@ -48,8 +46,8 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     description: "For small apps and indie developers",
-    price: 2900, // $29/mo
-    yearlyPrice: 29000, // $290/yr (2 months free)
+    price: 2900,
+    yearlyPrice: 29000,
     features: {
       maxApps: 3,
       maxSubscribers: 1_000,
@@ -67,8 +65,8 @@ export const PLANS: Plan[] = [
     id: "growth",
     name: "Growth",
     description: "For growing apps with more subscribers",
-    price: 9900, // $99/mo
-    yearlyPrice: 99000, // $990/yr
+    price: 9900,
+    yearlyPrice: 99000,
     popular: true,
     features: {
       maxApps: 10,
@@ -87,15 +85,15 @@ export const PLANS: Plan[] = [
     id: "scale",
     name: "Scale",
     description: "For established apps with high volume",
-    price: 29900, // $299/mo
-    yearlyPrice: 299000, // $2990/yr
+    price: 29900,
+    yearlyPrice: 299000,
     features: {
-      maxApps: -1, // unlimited
+      maxApps: -1,
       maxSubscribers: 100_000,
       maxApiRequests: 10_000_000,
       webhookRetention: 365,
       analyticsRetention: 730,
-      teamMembers: -1, // unlimited
+      teamMembers: -1,
       prioritySupport: true,
       customBranding: true,
       sla: "99.95%",
@@ -106,7 +104,7 @@ export const PLANS: Plan[] = [
     id: "enterprise",
     name: "Enterprise",
     description: "Custom solutions for large organizations",
-    price: -1, // custom pricing
+    price: -1,
     yearlyPrice: -1,
     features: {
       maxApps: -1,
@@ -123,44 +121,6 @@ export const PLANS: Plan[] = [
   },
 ];
 
-// Self-hosted has unlimited everything
-export const SELF_HOSTED_PLAN: Plan = {
-  id: "self-hosted",
-  name: "Self-Hosted",
-  description: "Run on your own infrastructure",
-  price: 0,
-  yearlyPrice: 0,
-  features: {
-    maxApps: -1,
-    maxSubscribers: -1,
-    maxApiRequests: -1,
-    webhookRetention: -1,
-    analyticsRetention: -1,
-    teamMembers: -1,
-    prioritySupport: false,
-    customBranding: true,
-    sla: null,
-    dedicatedSupport: false,
-  },
-};
-
-export function getDeploymentMode(): DeploymentMode {
-  return (process.env.CROISSANTPAY_DEPLOYMENT_MODE as DeploymentMode) || "self-hosted";
-}
-
-export function isCloudMode(): boolean {
-  return getDeploymentMode() === "cloud";
-}
-
-export function isSelfHosted(): boolean {
-  return getDeploymentMode() === "self-hosted";
-}
-
-export function getPlanById(planId: string): Plan | undefined {
-  if (planId === "self-hosted") return SELF_HOSTED_PLAN;
-  return PLANS.find((p) => p.id === planId);
-}
-
 export function formatPrice(cents: number): string {
   if (cents === 0) return "Free";
   if (cents === -1) return "Custom";
@@ -174,7 +134,6 @@ export function formatLimit(value: number): string {
   return value.toString();
 }
 
-/** Base URL of the marketing site (docs, pricing, etc.). Used when app and marketing are split. */
-export function marketingUrl(): string {
-  return process.env.NEXT_PUBLIC_MARKETING_URL || "https://croissantpay.com";
+export function appUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || "https://app.croissantpay.com";
 }

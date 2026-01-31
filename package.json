@@ -8,8 +8,11 @@
   ],
   "scripts": {
     "dev": "pnpm --filter @croissantpay/web dev",
+    "dev:marketing": "pnpm --filter @croissantpay/marketing dev",
     "build": "pnpm --filter @croissantpay/web build",
+    "build:marketing": "pnpm --filter @croissantpay/marketing build",
     "start": "pnpm --filter @croissantpay/web start",
+    "start:marketing": "pnpm --filter @croissantpay/marketing start",
     "db:generate": "pnpm --filter @croissantpay/web db:generate",
     "db:migrate": "pnpm --filter @croissantpay/web db:migrate",
     "db:push": "pnpm --filter @croissantpay/web db:push",

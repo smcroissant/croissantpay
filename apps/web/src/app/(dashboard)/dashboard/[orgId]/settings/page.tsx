@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { User, Key, ArrowRight, BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { marketingUrl } from "@/lib/config";
 import { db } from "@/lib/db";
 import { organization, organizationMember } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -117,42 +118,42 @@ export default async function SettingsPage({
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          <Link
-            href="/docs/getting-started"
-            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          <a
+            href={`${marketingUrl()}/docs/getting-started`}
+            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors block"
           >
             <h3 className="font-medium mb-1">Getting Started</h3>
             <p className="text-sm text-muted-foreground">
               Quick start guide for CroissantPay
             </p>
-          </Link>
-          <Link
-            href="/docs/sdk/react-native"
-            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          </a>
+          <a
+            href={`${marketingUrl()}/docs/sdk/react-native`}
+            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors block"
           >
             <h3 className="font-medium mb-1">React Native SDK</h3>
             <p className="text-sm text-muted-foreground">
               Integrate with React Native
             </p>
-          </Link>
-          <Link
-            href="/docs/webhooks"
-            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          </a>
+          <a
+            href={`${marketingUrl()}/docs/webhooks`}
+            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors block"
           >
             <h3 className="font-medium mb-1">Webhooks</h3>
             <p className="text-sm text-muted-foreground">
               Server-to-server notifications
             </p>
-          </Link>
-          <Link
-            href="/docs/self-hosted"
-            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+          </a>
+          <a
+            href={`${marketingUrl()}/docs/self-hosted`}
+            className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors block"
           >
             <h3 className="font-medium mb-1">Self-Hosting</h3>
             <p className="text-sm text-muted-foreground">
               Deploy on your own infrastructure
             </p>
-          </Link>
+          </a>
         </div>
       </div>
 

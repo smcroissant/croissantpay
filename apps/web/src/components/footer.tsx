@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Smartphone, Github } from "lucide-react";
+import { marketingUrl } from "@/lib/config";
 
 export function Footer() {
+  const base = marketingUrl();
   return (
     <footer className="py-12 px-6 border-t border-border/50 bg-background">
       <div className="max-w-7xl mx-auto">
@@ -20,9 +22,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Product</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/#features" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
-              <li><Link href="/changelog" className="hover:text-foreground transition-colors">Changelog</Link></li>
+              <li><a href={`${base}/#features`} className="hover:text-foreground transition-colors">Features</a></li>
+              <li><a href={`${base}/pricing`} className="hover:text-foreground transition-colors">Pricing</a></li>
+              <li><a href={`${base}/changelog`} className="hover:text-foreground transition-colors">Changelog</a></li>
               <li><Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link></li>
               <li><Link href="/register" className="hover:text-foreground transition-colors">Get Started</Link></li>
             </ul>
@@ -30,41 +32,41 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Documentation</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/docs" className="hover:text-foreground transition-colors">Overview</Link></li>
-              <li><Link href="/docs/introduction" className="hover:text-foreground transition-colors">Introduction</Link></li>
-              <li><Link href="/docs/getting-started" className="hover:text-foreground transition-colors">Getting Started</Link></li>
-              <li><Link href="/docs/self-hosted" className="hover:text-foreground transition-colors">Self-Hosting Guide</Link></li>
-              <li><Link href="/docs/api" className="hover:text-foreground transition-colors">API Reference</Link></li>
-              <li><Link href="/docs/webhooks" className="hover:text-foreground transition-colors">Webhooks</Link></li>
+              <li><a href={`${base}/docs`} className="hover:text-foreground transition-colors">Overview</a></li>
+              <li><a href={`${base}/docs/introduction`} className="hover:text-foreground transition-colors">Introduction</a></li>
+              <li><a href={`${base}/docs/getting-started`} className="hover:text-foreground transition-colors">Getting Started</a></li>
+              <li><a href={`${base}/docs/self-hosted`} className="hover:text-foreground transition-colors">Self-Hosting Guide</a></li>
+              <li><a href={`${base}/docs/api`} className="hover:text-foreground transition-colors">API Reference</a></li>
+              <li><a href={`${base}/docs/webhooks`} className="hover:text-foreground transition-colors">Webhooks</a></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">SDK & Features</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/docs/sdk" className="hover:text-foreground transition-colors">SDK Overview</Link></li>
-              <li><Link href="/docs/sdk/react-native" className="hover:text-foreground transition-colors">React Native</Link></li>
-              <li><Link href="/docs/sdk/ios-setup" className="hover:text-foreground transition-colors">iOS Setup</Link></li>
-              <li><Link href="/docs/sdk/android-setup" className="hover:text-foreground transition-colors">Android Setup</Link></li>
-              <li><Link href="/docs/features/products" className="hover:text-foreground transition-colors">Products</Link></li>
-              <li><Link href="/docs/features/entitlements" className="hover:text-foreground transition-colors">Entitlements</Link></li>
+              <li><a href={`${base}/docs/sdk`} className="hover:text-foreground transition-colors">SDK Overview</a></li>
+              <li><a href={`${base}/docs/sdk/react-native`} className="hover:text-foreground transition-colors">React Native</a></li>
+              <li><a href={`${base}/docs/sdk/ios-setup`} className="hover:text-foreground transition-colors">iOS Setup</a></li>
+              <li><a href={`${base}/docs/sdk/android-setup`} className="hover:text-foreground transition-colors">Android Setup</a></li>
+              <li><a href={`${base}/docs/features/products`} className="hover:text-foreground transition-colors">Products</a></li>
+              <li><a href={`${base}/docs/features/entitlements`} className="hover:text-foreground transition-colors">Entitlements</a></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/about" className="hover:text-foreground transition-colors">About</Link></li>
-              <li><Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
-              <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
-              <li><Link href="https://github.com/croissantpay/croissantpay" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</Link></li>
+              <li><a href={`${base}/about`} className="hover:text-foreground transition-colors">About</a></li>
+              <li><a href={`${base}/blog`} className="hover:text-foreground transition-colors">Blog</a></li>
+              <li><a href={`${base}/contact`} className="hover:text-foreground transition-colors">Contact</a></li>
+              <li><a href="https://github.com/croissantpay/croissantpay" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link></li>
-              <li><Link href="/acceptable-use" className="hover:text-foreground transition-colors">Acceptable Use</Link></li>
+              <li><a href={`${base}/terms`} className="hover:text-foreground transition-colors">Terms of Service</a></li>
+              <li><a href={`${base}/privacy`} className="hover:text-foreground transition-colors">Privacy Policy</a></li>
+              <li><a href={`${base}/cookies`} className="hover:text-foreground transition-colors">Cookie Policy</a></li>
+              <li><a href={`${base}/acceptable-use`} className="hover:text-foreground transition-colors">Acceptable Use</a></li>
             </ul>
           </div>
         </div>
