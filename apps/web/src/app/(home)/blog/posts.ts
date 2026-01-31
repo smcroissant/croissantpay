@@ -148,13 +148,15 @@ Remember: the "right" price is the one that maximizes your business goals, wheth
   },
   {
     slug: "self-hosting-production",
-    title: "Self-Hosting CroissantPay in Production",
-    excerpt: "Best practices for running CroissantPay on your own infrastructure. Covers Docker, Kubernetes, monitoring, and scaling.",
+    title: "Self-Hosting CroissantPay in Production (coming soon)",
+    excerpt: "Self-hosting is coming soon. Best practices for running CroissantPay on your own infrastructure. Covers Docker, Kubernetes, monitoring, and scaling.",
     date: "December 10, 2025",
     readTime: "15 min read",
     author: "CroissantPay Team",
     category: "Tutorial",
     content: `
+> **Note:** Self-hosting is coming soon. This guide will be fully applicable when we launch. For now, use CroissantPay Cloud.
+
 Running CroissantPay on your own infrastructure gives you complete control over your data and removes any usage-based pricing. This guide covers everything you need to know to deploy CroissantPay in production.
 
 ## Prerequisites
@@ -449,7 +451,7 @@ CroissantPay is a complete solution for managing subscriptions and in-app purcha
 We're working on making CroissantPay fully open source under the MIT license. When we launch, this will mean:
 
 - **Inspect the code** - See exactly how everything works
-- **Self-host for free** - Run on your own infrastructure with no limits
+- **Self-host for free (coming soon)** - Run on your own infrastructure with no limits
 - **Contribute** - Help shape the future of the project
 - **No vendor lock-in** - Your data, your control
 
@@ -466,8 +468,8 @@ Managed hosting with:
 - 99.9% uptime SLA
 - Priority support (paid plans)
 
-### Self-Hosted
-Run on your own servers:
+### Self-Hosted (coming soon)
+When we launch, run on your own servers:
 - 100% free, forever
 - No usage limits
 - Complete data control
@@ -480,7 +482,7 @@ We believe in transparent, predictable pricing:
 - **No revenue share** - We never take a cut of your revenue
 - **Flat monthly fee** - Know exactly what you'll pay
 - **Free tier** - Get started without a credit card
-- **Self-host for free** - Always an option
+- **Self-host for free (coming soon)** - Always an option when we launch
 
 ## Getting Started
 

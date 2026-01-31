@@ -244,9 +244,9 @@ export default function CookiesPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-4">Self-Hosted Deployments</h2>
+            <h2 className="text-2xl font-bold mb-4">Self-Hosted Deployments (coming soon)</h2>
             <p className="text-muted-foreground">
-              If you use CroissantPay in a self-hosted configuration, only essential 
+              When self-hosting is available, if you use CroissantPay in a self-hosted configuration, only essential 
               cookies are used. No analytics or third-party cookies are set unless you 
               configure them yourself. You have full control over cookie behavior in your 
               deployment.

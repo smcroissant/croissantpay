@@ -46,13 +46,24 @@ export default function SelfHostedPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-12">
+        {/* Coming soon banner */}
+        <div className="mb-8 p-4 rounded-xl border-2 border-primary/30 bg-primary/10 flex items-start gap-3">
+          <AlertTriangle className="w-6 h-6 text-primary shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-foreground">Self-hosting coming soon</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              We're still working on the self-hosting release. This guide will be available when we launch. For now, use <Link href="/register" className="text-primary hover:underline">CroissantPay Cloud</Link> or <Link href="/contact" className="text-primary hover:underline">get in touch</Link> to be notified when self-hosting is ready.
+            </p>
+          </div>
+        </div>
+
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link href="/docs" className="hover:text-foreground transition-colors">
             Docs
           </Link>
           <span>/</span>
-          <span className="text-foreground">Self-Hosted</span>
+          <span className="text-foreground">Self-Hosted (coming soon)</span>
         </nav>
 
         <div className="flex items-center gap-3 mb-4">
@@ -60,7 +71,7 @@ export default function SelfHostedPage() {
           <h1 className="text-4xl font-bold">Self-Hosting Guide</h1>
         </div>
         <p className="text-xl text-muted-foreground mb-12">
-          Deploy CroissantPay on your own infrastructure with Docker.
+          Deploy CroissantPay on your own infrastructure with Docker. (Coming soon.)
         </p>
 
         {/* Requirements */}

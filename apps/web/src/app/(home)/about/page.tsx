@@ -64,7 +64,7 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <ValueCard icon={Heart} title="Open Source (coming soon)" description="We're going open source — MIT licensed, forever free to self-host" />
+              <ValueCard icon={Heart} title="Open Source (coming soon)" description="We're going open source — MIT licensed, forever free when self-hosting launches" />
               <ValueCard icon={Shield} title="Privacy First" description="Your data stays yours" />
               <ValueCard icon={Zap} title="Developer Focus" description="Built by developers, for developers" />
               <ValueCard icon={Globe} title="Global" description="Works anywhere, for anyone" />
@@ -92,7 +92,7 @@ export default function AboutPage() {
             <p className="text-muted-foreground mt-4">
               Today, CroissantPay powers thousands of apps, from small indie games to 
               enterprise applications. We're proud to offer both a managed cloud service 
-              and a self-hosted option, because we believe you should have the freedom to 
+              and a self-hosted option (coming soon), because we believe you should have the freedom to 
               choose.
             </p>
           </div>
@@ -131,7 +131,7 @@ export default function AboutPage() {
             for your own needs. We believe open source makes better software.
           </p>
           <p className="text-sm text-muted-foreground mb-6">
-            In the meantime, you can use CroissantPay Cloud or get in touch if you're interested in early access to self-hosting.
+            In the meantime, you can use CroissantPay Cloud or get in touch if you want to be notified when self-hosting launches.
           </p>
           <Link
             href="/contact"

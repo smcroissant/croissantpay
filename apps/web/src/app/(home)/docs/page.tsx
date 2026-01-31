@@ -108,8 +108,8 @@ export default async function DocsPage() {
             />
             <DocCard
               icon={<Server className="w-6 h-6" />}
-              title="Self-Hosting"
-              description="Deploy CroissantPay on your own infrastructure with Docker"
+              title="Self-Hosting (coming soon)"
+              description="Self-hosting coming soon. Deploy CroissantPay on your own infrastructure with Docker."
               href="/docs/self-hosted"
             />
           </div>

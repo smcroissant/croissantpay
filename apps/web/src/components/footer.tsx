@@ -33,7 +33,7 @@ export function Footer() {
               <li><Link href="/docs" className="hover:text-foreground transition-colors">Overview</Link></li>
               <li><Link href="/docs/introduction" className="hover:text-foreground transition-colors">Introduction</Link></li>
               <li><Link href="/docs/getting-started" className="hover:text-foreground transition-colors">Getting Started</Link></li>
-              <li><Link href="/docs/self-hosted" className="hover:text-foreground transition-colors">Self-Hosting Guide</Link></li>
+              <li><Link href="/docs/self-hosted" className="hover:text-foreground transition-colors">Self-Hosting Guide (coming soon)</Link></li>
               <li><Link href="/docs/api" className="hover:text-foreground transition-colors">API Reference</Link></li>
               <li><Link href="/docs/webhooks" className="hover:text-foreground transition-colors">Webhooks</Link></li>
             </ul>

@@ -103,7 +103,7 @@ export default function PrivacyPage() {
               our agreements.
             </p>
             <p className="text-muted-foreground">
-              For self-hosted deployments, data retention is entirely under your control.
+              When self-hosting is available, data retention will be entirely under your control.
             </p>
           </section>
 
@@ -164,9 +164,9 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-4">Self-Hosted Deployments</h2>
+            <h2 className="text-2xl font-bold mb-4">Self-Hosted Deployments (coming soon)</h2>
             <p className="text-muted-foreground mb-4">
-              If you use CroissantPay in a self-hosted configuration:
+              When self-hosting is available, if you use CroissantPay in a self-hosted configuration:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>All data is stored on your own infrastructure</li>

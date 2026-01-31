@@ -76,8 +76,8 @@ export default function IntroductionPage() {
             />
             <FeatureCard
               icon={<Server className="w-6 h-6" />}
-              title="Self-Hostable"
-              description="Deploy on your own infrastructure with Docker. Full control over your data."
+              title="Self-Hostable (coming soon)"
+              description="Self-hosting coming soon. Deploy on your own infrastructure with Docker. Full control over your data."
             />
             <FeatureCard
               icon={<Shield className="w-6 h-6" />}
@@ -214,9 +214,9 @@ export default function IntroductionPage() {
               </ul>
             </div>
             <div className="p-6 rounded-xl bg-card border border-border">
-              <h3 className="text-lg font-semibold mb-2">🏠 Self-Hosted</h3>
+              <h3 className="text-lg font-semibold mb-2">🏠 Self-Hosted (coming soon)</h3>
               <p className="text-muted-foreground text-sm mb-4">
-                Deploy on your own infrastructure with Docker. Full control 
+                Self-hosting coming soon. Deploy on your own infrastructure with Docker. Full control 
                 over your data and no usage limits.
               </p>
               <ul className="space-y-2 text-sm">

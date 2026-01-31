@@ -45,7 +45,7 @@ export default function TermsPage() {
             </p>
             <p className="text-muted-foreground">
               These Terms apply to all visitors, users, and others who access or use the Service, 
-              including our cloud-hosted platform and self-hosted software.
+              including our cloud-hosted platform and self-hosted software (when available; self-hosting coming soon).
             </p>
           </section>
 
@@ -114,9 +114,9 @@ export default function TermsPage() {
               license to access and use the Service for your internal business purposes.
             </p>
 
-            <h3 className="text-lg font-semibold mb-3">Self-Hosted Software</h3>
+            <h3 className="text-lg font-semibold mb-3">Self-Hosted Software (coming soon)</h3>
             <p className="text-muted-foreground mb-4">
-              CroissantPay's self-hosted software is released under the MIT License. You may 
+              When we launch self-hosting, CroissantPay's self-hosted software will be released under the MIT License. You may 
               use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
               of the Software, subject to the MIT License terms.
             </p>

@@ -101,7 +101,7 @@ export default async function Home() {
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Subscription and in-app purchase management for React Native.
-            Self-host for free or use our managed cloud — your choice.
+            Use our managed cloud. Self-hosting coming soon.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -112,11 +112,11 @@ export default async function Home() {
               Try Cloud Free
             </Link>
             <Link
-              href="/docs/self-hosted"
+              href="/contact"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors"
             >
               <Server className="w-5 h-5" />
-              Self-Host
+              Self-Host (coming soon)
             </Link>
           </div>
         </div>
@@ -129,8 +129,7 @@ export default async function Home() {
             Deploy Your Way
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Choose between our managed cloud service or self-host on your own infrastructure.
-            Same great features, your choice of control.
+            Use our managed cloud today. Self-hosting coming soon — same great features, your choice of control.
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -175,10 +174,10 @@ export default async function Home() {
               <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-6">
                 <Server className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-2">Self-Hosted</h3>
+              <h3 className="text-2xl font-bold mb-2">Self-Hosted (coming soon)</h3>
               <p className="text-muted-foreground mb-6">
                 Run CroissantPay on your own servers. Full control over your data
-                and infrastructure. Forever free.
+                and infrastructure. Forever free when we launch.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
@@ -196,10 +195,10 @@ export default async function Home() {
                 ))}
               </ul>
               <Link
-                href="/docs/self-hosted"
+                href="/contact"
                 className="block w-full text-center px-6 py-3 rounded-xl bg-secondary text-foreground font-semibold hover:bg-secondary/80 transition-colors"
               >
-                View Documentation
+                Get notified when self-hosting launches
               </Link>
             </div>
           </div>
@@ -288,7 +287,7 @@ export default async function Home() {
             Start free, scale as you grow. No hidden fees, no revenue share.
           </p>
           <p className="text-center mb-12">
-            <span className="text-primary font-medium">Self-hosting is always free</span>
+            <span className="text-primary font-medium">Self-hosting coming soon</span>
             <span className="text-muted-foreground"> — cloud plans below</span>
           </p>
 
@@ -462,9 +461,9 @@ const features = [
   },
   {
     icon: Server,
-    title: "Self-Host or Cloud",
+    title: "Self-Host or Cloud (coming soon)",
     description:
-      "Run on your servers or use our managed cloud. Same features, your choice.",
+      "Use our managed cloud today. Self-hosting coming soon — same features, your choice.",
   },
 ];
 

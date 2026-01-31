@@ -148,9 +148,9 @@ export default async function SettingsPage({
             href="/docs/self-hosted"
             className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
           >
-            <h3 className="font-medium mb-1">Self-Hosting</h3>
+            <h3 className="font-medium mb-1">Self-Hosting (coming soon)</h3>
             <p className="text-sm text-muted-foreground">
-              Deploy on your own infrastructure
+              Self-hosting coming soon. Deploy on your own infrastructure
             </p>
           </Link>
         </div>

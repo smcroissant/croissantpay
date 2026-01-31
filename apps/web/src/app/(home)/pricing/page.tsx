@@ -68,7 +68,7 @@ export default async function PricingPage() {
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
           Start free, scale as you grow. No hidden fees, no revenue share.
-          Self-hosting is always free.
+          Self-hosting coming soon.
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link
@@ -83,7 +83,7 @@ export default async function PricingPage() {
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
           >
             <Server className="w-5 h-5" />
-            Self-Hosted
+            Self-Hosted (coming soon)
           </Link>
         </div>
       </section>
@@ -237,13 +237,13 @@ export default async function PricingPage() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary text-foreground text-sm mb-4">
               <Server className="w-4 h-4" />
-              Self-Hosted
+              Self-Hosted (coming soon)
             </div>
             <h2 className="text-3xl font-bold mb-4">
               Run on Your Own Infrastructure
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Open source coming soon — unlimited everything, forever free when we launch.
+              Self-hosting and open source coming soon — unlimited everything, forever free when we launch.
               Your data never leaves your servers.
             </p>
           </div>
@@ -251,9 +251,9 @@ export default async function PricingPage() {
           <div className="bg-card border-2 border-primary rounded-2xl p-8 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-2xl font-bold">Self-Hosted</h3>
+                <h3 className="text-2xl font-bold">Self-Hosted (coming soon)</h3>
                 <p className="text-muted-foreground">
-                  Full control over your data and infrastructure
+                  Full control over your data and infrastructure when we launch
                 </p>
               </div>
               <div className="text-right">
@@ -307,27 +307,23 @@ export default async function PricingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href="/docs/self-hosted"
+                href="/contact"
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold"
               >
-                Read Documentation
+                Get notified when self-hosting launches
                 <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
-                href="https://github.com/croissantpay/croissantpay"
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors font-semibold"
-              >
-                <Github className="w-5 h-5" />
-                View on GitHub
               </Link>
             </div>
           </div>
 
-          {/* Quick Deploy */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h4 className="font-semibold mb-4">Quick Deploy</h4>
-            <div className="bg-background rounded-xl p-4 font-mono text-sm overflow-x-auto">
-              <code className="text-muted-foreground">
+          {/* Quick Deploy - coming soon */}
+          <div className="bg-card border border-border rounded-2xl p-6 opacity-90">
+            <h4 className="font-semibold mb-4">Quick Deploy (coming soon)</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              When we launch self-hosting, you'll be able to deploy with Docker in a few commands.
+            </p>
+            <div className="bg-background rounded-xl p-4 font-mono text-sm overflow-x-auto text-muted-foreground">
+              <code>
                 <span className="text-primary">$</span> git clone https://github.com/croissantpay/croissantpay.git
                 <br />
                 <span className="text-primary">$</span> cd croissantpay
@@ -335,12 +331,6 @@ export default async function PricingPage() {
                 <span className="text-primary">$</span> docker compose up -d
               </code>
             </div>
-            <p className="text-sm text-muted-foreground mt-3">
-              That's it! CroissantPay will be running at{" "}
-              <code className="px-1 py-0.5 bg-secondary rounded">
-                http://localhost:3000
-              </code>
-            </p>
           </div>
         </div>
       </section>
@@ -354,11 +344,11 @@ export default async function PricingPage() {
           <div className="space-y-6">
             <FAQ
               question="Can I switch between Cloud and Self-Hosted?"
-              answer="Yes! You can export your data from Cloud and import it into a self-hosted instance anytime, or vice versa. We don't lock you in."
+              answer="When self-hosting launches, you'll be able to export your data from Cloud and import it into a self-hosted instance anytime, or vice versa. We don't lock you in."
             />
             <FAQ
               question="Do you take a cut of my revenue?"
-              answer="No. Unlike some alternatives, CroissantPay never takes a percentage of your in-app purchase revenue. You only pay the flat subscription fee for Cloud, or nothing for self-hosted."
+              answer="No. Unlike some alternatives, CroissantPay never takes a percentage of your in-app purchase revenue. You only pay the flat subscription fee for Cloud, or nothing when self-hosted is available."
             />
             <FAQ
               question="What happens if I exceed my plan limits?"
@@ -392,11 +382,11 @@ export default async function PricingPage() {
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              href="/docs/self-hosted"
+              href="/contact"
               className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors font-semibold"
             >
               <Server className="w-5 h-5" />
-              Self-Host Guide
+              Get notified (self-hosting coming soon)
             </Link>
           </div>
         </div>

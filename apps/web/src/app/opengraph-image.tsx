@@ -93,7 +93,7 @@ export default async function Image() {
             marginTop: 48,
           }}
         >
-          {["Self-Host Free", "No Revenue Share", "iOS & Android"].map(
+          {["Self-Host coming soon", "No Revenue Share", "iOS & Android"].map(
             (feature) => (
               <div
                 key={feature}

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s | CroissantPay",
   },
   description:
-    "In-app purchase and subscription management for React Native. Open source coming soon. Self-host for free or use our managed cloud. No revenue share.",
+    "In-app purchase and subscription management for React Native. Open source and self-hosting coming soon. Use our managed cloud. No revenue share.",
   keywords: [
     "in-app purchases",
     "subscriptions",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     siteName: "CroissantPay",
     title: "CroissantPay - IAP Management (open source coming soon)",
     description:
-      "In-app purchase management for React Native. Open source coming soon. Self-host for free or use our managed cloud. No revenue share ever.",
+      "In-app purchase management for React Native. Open source and self-hosting coming soon. Use our managed cloud. No revenue share ever.",
     images: [
       {
         url: "/opengraph-image",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CroissantPay - IAP Management (open source coming soon)",
     description:
-      "In-app purchase management for React Native. Open source coming soon. Self-host for free or use our managed cloud.",
+      "In-app purchase management for React Native. Open source and self-hosting coming soon. Use our managed cloud.",
     creator: "@croissantpay",
     images: ["/opengraph-image"],
   },

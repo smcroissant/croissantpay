@@ -28,7 +28,7 @@ const releases = [
       { type: "feature", text: "Subscriber management dashboard" },
       { type: "feature", text: "Real-time webhooks" },
       { type: "feature", text: "Analytics dashboard with MRR, churn, and more" },
-      { type: "feature", text: "Self-hosted deployment with Docker" },
+      { type: "feature", text: "Self-hosted deployment with Docker (coming soon)" },
       { type: "feature", text: "Cloud deployment option" },
     ],
   },
