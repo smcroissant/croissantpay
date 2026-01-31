@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Smartphone, Mail, Lock, ArrowRight, Github, Fingerprint } from "lucide-react";
@@ -12,10 +12,14 @@ import { signIn, authClient } from "@/lib/auth-client";
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional().default(true),
+  rememberMe: z.boolean().default(true),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type LoginFormData = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+};
 
 function LoginForm() {
   const router = useRouter();
@@ -26,7 +30,7 @@ function LoginForm() {
   const resetSuccess = searchParams.get("reset") === "success";
 
   const form = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginSchema) as Resolver<LoginFormData>,
     defaultValues: {
       email: "",
       password: "",
